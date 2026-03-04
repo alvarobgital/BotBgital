@@ -13,12 +13,12 @@ use App\Http\Controllers\Panel\UserController;
 use App\Http\Controllers\Panel\TicketController;
 
 // Panel APIs using 'web' middleware for sessions natively
-Route::prefix('api')->group(function () {
+Route::group(['prefix' => 'api', 'middleware' => ['web']], function () {
     // Auth
     Route::post('/auth/login', [AuthController::class , 'login']);
 
     // Protected panel API routes using standard web login state
-    Route::middleware('auth')->group(function () {
+    Route::middleware(['auth'])->group(function () {
             Route::post('/auth/logout', [AuthController::class , 'logout']);
             Route::get('/auth/user', [AuthController::class , 'user']);
 
@@ -66,8 +66,7 @@ Route::prefix('api')->group(function () {
             Route::put('/users/{user}', [UserController::class , 'update']);
             Route::delete('/users/{user}', [UserController::class , 'destroy']);
         }
-        );
-    });
+        );    });
 
 // React SPA catch-all (ignoring /api)
 Route::get('/{any?}', function () {
