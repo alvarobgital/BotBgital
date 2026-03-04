@@ -54,9 +54,15 @@ function FlowModal({ flow, onClose, onSave }) {
         is_active: flow?.is_active ?? true,
         sort_order: flow?.sort_order || 0,
         media_file: null,
+        follow_up_to: flow?.follow_up_to || '',
     });
+    const [flows, setFlows] = useState([]);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+
+    useEffect(() => {
+        api.get('/flows').then(res => setFlows(res.data.filter(f => f.id !== flow?.id)));
+    }, [flow]);
 
     function setField(key, value) {
         setForm(prev => ({ ...prev, [key]: value }));
@@ -99,6 +105,10 @@ function FlowModal({ flow, onClose, onSave }) {
 
         if (form.media_file) {
             formData.append('media_file', form.media_file);
+        }
+
+        if (form.follow_up_to) {
+            formData.append('follow_up_to', form.follow_up_to);
         }
 
         if (isEdit) {
@@ -169,9 +179,26 @@ function FlowModal({ flow, onClose, onSave }) {
                                 <option value="text">Texto simple</option>
                                 <option value="buttons">Con botones</option>
                                 <option value="list">Lista/Menú interactivo</option>
+                                <option value="troubleshooting">Diagnóstico de Soporte (Pasos)</option>
                                 <option value="ticket_creation">Generar Ticket (Soporte)</option>
                                 <option value="handoff">Escalar a asesor</option>
                             </select>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Flujo de Seguimiento (Opcional)</label>
+                            <select className="form-input" value={form.follow_up_to}
+                                onChange={e => setField('follow_up_to', e.target.value)}>
+                                <option value="">Ninguno (Flujo final o independiente)</option>
+                                {flows.map(f => (
+                                    <option key={f.id} value={f.id}>
+                                        [{f.category}] {f.trigger_keywords.join(', ')}
+                                    </option>
+                                ))}
+                            </select>
+                            <p style={{ fontSize: '0.7rem', marginTop: 4, opacity: 0.7 }}>
+                                Si este es un paso de diagnóstico, al decir "No funcionó", el bot saltará a este flujo.
+                            </p>
                         </div>
 
                         <div className="form-group">
@@ -286,7 +313,14 @@ export default function FlowEditor() {
         loadFlows();
     }
 
-    const typeLabels = { text: 'Texto', buttons: 'Botones', handoff: 'Escalar', list: 'Lista', ticket_creation: 'Ticket' };
+    const typeLabels = {
+        text: 'Texto',
+        buttons: 'Botones',
+        handoff: 'Escalar',
+        list: 'Lista',
+        ticket_creation: 'Ticket',
+        troubleshooting: 'Diagnóstico'
+    };
 
     if (loading) return <div className="loading-spinner"><div className="spinner"></div></div>;
 

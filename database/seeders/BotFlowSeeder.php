@@ -79,5 +79,38 @@ class BotFlowSeeder extends Seeder
                 $flow
             );
         }
+
+        // --- Ejemplo de Soporte Avanzado (Telecomunicaciones) ---
+
+        // 1. Detección inicial
+        $step1 = BotFlow::updateOrCreate(
+        ['category' => 'falla_internet'],
+        [
+            'trigger_keywords' => ['no tengo internet', 'no hay internet', 'falla internet', 'internet lento', 'sin red'],
+            'response_text' => "📡 *Diagnóstico de Red Bgital*\n\nLamento que tengas problemas. Vamos a intentar solucionarlo rápidamente.\n\n*Paso 1:* Por favor, verifica que tu modem esté encendido y que el cable de fibra óptica (el cable blanco delgado) no esté doblado o roto.\n\n¿Ya realizaste esta verificación?",
+            'response_type' => 'troubleshooting',
+            'is_active' => true,
+            'sort_order' => 10,
+        ]
+        );
+
+        // 2. Paso 2 (Reinicio)
+        $step2 = BotFlow::updateOrCreate(
+        ['category' => 'reinicio_modem'],
+        [
+            'trigger_keywords' => [],
+            'response_text' => "🔄 *Paso 2: Reinicio de Equipo*\n\nDesconecta tu modem de la corriente eléctrica por 30 segundos y vuelve a conectarlo. Espera 2 minutos a que todas las luces se estabilicen.\n\n¿Esto solucionó tu problema?",
+            'response_type' => 'troubleshooting',
+            'follow_up_to' => $step1->id,
+            'is_active' => true,
+            'sort_order' => 11,
+        ]
+        );
+
+        // Vinculamos el paso 1 al paso 2 como seguimiento
+        $step1->update(['follow_up_to' => $step2->id]);
+
+    // El motor del bot detectará que después del Step 2 no hay más flujos 
+    // y ofrecerá crear el ticket automáticamente.
     }
 }
