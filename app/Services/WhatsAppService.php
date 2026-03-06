@@ -42,7 +42,7 @@ class WhatsAppService
             'type' => 'reply',
             'reply' => [
             'id' => (string)$id,
-            'title' => substr($title, 0, 20),
+            'title' => mb_substr($title, 0, 20, 'UTF-8'),
             ],
             ];
         })->values()->toArray();
@@ -77,13 +77,13 @@ class WhatsAppService
             $rows = [];
             foreach (array_slice($section['rows'] ?? [], 0, 10) as $row) {
                 $rows[] = [
-                    'id' => substr($row['id'] ?? uniqid(), 0, 200),
-                    'title' => substr($row['title'] ?? '', 0, 24),
-                    'description' => substr($row['description'] ?? '', 0, 72),
+                    'id' => mb_substr($row['id'] ?? uniqid(), 0, 200, 'UTF-8'),
+                    'title' => mb_substr($row['title'] ?? '', 0, 24, 'UTF-8'),
+                    'description' => mb_substr($row['description'] ?? '', 0, 72, 'UTF-8'),
                 ];
             }
             $formattedSections[] = [
-                'title' => substr($section['title'] ?? '', 0, 24),
+                'title' => mb_substr($section['title'] ?? '', 0, 24, 'UTF-8'),
                 'rows' => $rows,
             ];
         }
@@ -96,7 +96,7 @@ class WhatsAppService
                 'type' => 'list',
                 'body' => ['text' => $bodyText],
                 'action' => [
-                    'button' => substr($buttonText, 0, 20),
+                    'button' => mb_substr($buttonText, 0, 20, 'UTF-8'),
                     'sections' => $formattedSections,
                 ],
             ],
