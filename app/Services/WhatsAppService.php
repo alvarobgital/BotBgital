@@ -126,6 +126,12 @@ class WhatsAppService
 
     protected function sendRequest(array $payload): ?array
     {
+        // Fix Mexican number +521 issue for WhatsApp API Testing
+        // The webhook receives '521...', but the Meta allowed list requires '52...'
+        if (isset($payload['to']) && preg_match('/^521(\d{10})$/', $payload['to'], $matches)) {
+            $payload['to'] = '52' . $matches[1];
+        }
+
         try {
             $response = Http::withToken($this->accessToken)
                 ->post($this->apiUrl, $payload);
