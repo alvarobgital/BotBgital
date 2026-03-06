@@ -102,6 +102,81 @@ Route::group(['prefix' => 'api', 'middleware' => ['web']], function () {
     });
 
 // React SPA catch-all (ignoring /api)
+Route::get('/update-flows', function () {
+    $flowId = App\Models\BotFlowStep::where('step_key', 'ask_cp')->value('bot_flow_id');
+    if (!$flowId)
+        return 'Flow not found';
+
+    App\Models\BotFlowStep::updateOrCreate(
+    ['step_key' => 'confirm_neighborhood'],
+    [
+        'bot_flow_id' => $flowId,
+        'message_text' => "¡Tenemos cobertura en tu código postal! 🚀\n\n📍 CP: {{zip_code}}\n🏘️ Zonas cubiertas: {{coverage_zones}}\n\n⚠️ ¿Tu colonia o calle se encuentra en esta lista?",
+        'response_type' => 'buttons',
+        'options' => [
+            ['id' => 'yes_colonia', 'title' => '✅ Sí, mi colonia está', 'next_step' => 'coverage_success'],
+            ['id' => 'no_colonia', 'title' => '❌ No está', 'next_step' => 'select_service_type']
+        ],
+        'is_active' => true,
+    ]
+    );
+
+    App\Models\BotFlowStep::updateOrCreate(
+    ['step_key' => 'coverage_success'],
+    [
+        'bot_flow_id' => $flowId,
+        'message_text' => "¡Excelente! 🎉 Tienes cobertura confirmada.\n\n¿Qué te gustaría hacer ahora?",
+        'response_type' => 'buttons',
+        'options' => [
+            ['id' => 'opt_plans', 'title' => 'Ver Planes', 'next_flow' => 'planes'],
+            ['id' => 'opt_agent', 'title' => 'Hablar con Asesor', 'action' => 'escalate_agent']
+        ],
+        'is_active' => true,
+    ]
+    );
+
+    App\Models\BotFlowStep::updateOrCreate(
+    ['step_key' => 'select_service_type'],
+    [
+        'bot_flow_id' => $flowId,
+        'message_text' => "Entendido. Para poder brindarte la alternativa correcta, ¿El servicio de internet que buscas es para tu *Hogar* o para una *Empresa/Negocio*?",
+        'response_type' => 'buttons',
+        'options' => [
+            ['id' => 'para_hogar', 'title' => '🏠 Para Hogar', 'next_step' => 'no_coverage_home'],
+            ['id' => 'para_empresa', 'title' => '🏢 Para Empresa', 'next_step' => 'escalate_empresa']
+        ],
+        'is_active' => true,
+    ]
+    );
+
+    App\Models\BotFlowStep::updateOrCreate(
+    ['step_key' => 'no_coverage_home'],
+    [
+        'bot_flow_id' => $flowId,
+        'message_text' => "😔 Lamentamos mucho no tener cobertura en tu zona para servicio residencial en este momento.\n\nTe recomendamos estar pendiente de nuestras redes sociales para conocer nuevas zonas de cobertura en el futuro.\n\n¡Gracias por tu interés en *BGITAL*! 👋",
+        'response_type' => 'action_only',
+        'action_type' => 'close_conversation',
+        'is_active' => true,
+    ]
+    );
+
+    App\Models\BotFlowStep::updateOrCreate(
+    ['step_key' => 'escalate_empresa'],
+    [
+        'bot_flow_id' => $flowId,
+        'message_text' => "¡Excelente! Para servicios empresariales o dedicados, podemos evaluar la viabilidad técnica para extender nuestra infraestructura a tu zona.\n\nUn ejecutivo especializado se pondrá en contacto contigo a la brevedad.",
+        'response_type' => 'action_only',
+        'action_type' => 'escalate_agent',
+        'action_config' => ['reason' => 'Solicitud de factibilidad para EMPRESA fuera de zona inicial'],
+        'is_active' => true,
+    ]
+    );
+
+    App\Models\BotFlowStep::where('step_key', 'check_coverage')->delete();
+
+    return 'Steps updated successfully!';
+});
+
 Route::get('/{any?}', function () {
     return view('app');
 })->where('any', '^(?!api/).*');
