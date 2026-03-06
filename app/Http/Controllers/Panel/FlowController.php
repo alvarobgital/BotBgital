@@ -116,6 +116,16 @@ class FlowController extends Controller
             'sort_order' => 'integer',
         ]);
 
+        if ($request->hasFile('media_file')) {
+            $request->validate(['media_file' => 'file|max:10240']); // 10MB max
+            $path = $request->file('media_file')->store('flow_media', 'public');
+            $validated['media_path'] = '/storage/' . $path;
+            $mime = $request->file('media_file')->getMimeType();
+            $validated['media_type'] = str_starts_with($mime, 'image/') ? 'image'
+                : (str_starts_with($mime, 'video/') ? 'video'
+                : (str_starts_with($mime, 'audio/') ? 'audio' : 'document'));
+        }
+
         $validated['bot_flow_id'] = $flow->id;
 
         // If entry point, unset others
@@ -144,6 +154,20 @@ class FlowController extends Controller
             'is_entry_point' => 'boolean',
             'sort_order' => 'integer',
         ]);
+
+        if ($request->hasFile('media_file')) {
+            $request->validate(['media_file' => 'file|max:10240']);
+            $path = $request->file('media_file')->store('flow_media', 'public');
+            $validated['media_path'] = '/storage/' . $path;
+            $mime = $request->file('media_file')->getMimeType();
+            $validated['media_type'] = str_starts_with($mime, 'image/') ? 'image'
+                : (str_starts_with($mime, 'video/') ? 'video'
+                : (str_starts_with($mime, 'audio/') ? 'audio' : 'document'));
+        }
+        elseif ($request->input('remove_media') === 'true') {
+            $validated['media_path'] = null;
+            $validated['media_type'] = null;
+        }
 
         if (!empty($validated['is_entry_point'])) {
             BotFlowStep::where('bot_flow_id', $step->bot_flow_id)->where('id', '!=', $step->id)->update(['is_entry_point' => false]);

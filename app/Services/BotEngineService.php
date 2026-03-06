@@ -23,7 +23,7 @@ class BotEngineService
         }
 
         // 2. Global Commands (e.g. Menu)
-        if (in_array($normalizedText, ['menu', 'inicio', 'menú', 'salir'])) {
+        if (in_array($normalizedText, ['menu', 'inicio', 'menú', 'salir', 'reiniciar', 'nueva conversacion', 'nueva', 'empezar de nuevo'])) {
             $this->resetState($conversation);
             $conversation->refresh();
         }
@@ -162,18 +162,27 @@ class BotEngineService
                     return $actionResult;
                 }
             }
-            return $this->text($message);
+            return $this->attachMedia($this->text($message), $step);
         }
 
         if ($step->response_type === 'buttons') {
-            return $this->buttons($message, $step->options ?? []);
+            return $this->attachMedia($this->buttons($message, $step->options ?? []), $step);
         }
 
         if ($step->response_type === 'list') {
-            return $this->listMenu($message, $step->options ?? []);
+            return $this->attachMedia($this->listMenu($message, $step->options ?? []), $step);
         }
 
-        return $this->text($message);
+        return $this->attachMedia($this->text($message), $step);
+    }
+
+    private function attachMedia(array $response, BotFlowStep $step): array
+    {
+        if (!empty($step->media_path)) {
+            $response['media_path'] = $step->media_path;
+            $response['media_type'] = $step->media_type;
+        }
+        return $response;
     }
 
     private function executeAction(Conversation $conversation, string $actionType, array &$data, ?array $config = []): array

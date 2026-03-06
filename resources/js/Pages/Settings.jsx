@@ -103,6 +103,9 @@ export default function Settings() {
                     <div className="form-group">
                         <label className="form-label">ID del Grupo de Notificaciones</label>
                         <input className="form-input" value={settings.telegram_notify_group_id || ''} onChange={e => setField('telegram_notify_group_id', e.target.value)} placeholder="-100123456789" />
+                        <p style={{ fontSize: '0.75rem', marginTop: 8, color: 'var(--text-muted)' }}>
+                            Para obtener el ID, invita al bot a tu grupo de Telegram y usa el comando <b>/start</b> o verifica la URL en la versión web de Telegram (suele empezar con <code>-100</code>).
+                        </p>
                     </div>
                 </div>
 

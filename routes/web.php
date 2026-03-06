@@ -68,6 +68,7 @@ Route::group(['prefix' => 'api', 'middleware' => ['web']], function () {
             Route::post('/conversations/{conversation}/take-over', [ConversationController::class , 'takeOver']);
             Route::post('/conversations/{conversation}/reactivate-bot', [ConversationController::class , 'reactivateBot']);
             Route::post('/conversations/{conversation}/close', [ConversationController::class , 'close']);
+            Route::delete('/conversations/{conversation}', [ConversationController::class , 'destroy']);
 
             // Messages
             Route::post('/conversations/{conversation}/messages', [MessageController::class , 'send']);

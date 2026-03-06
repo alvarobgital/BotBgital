@@ -14,7 +14,7 @@ class CoverageController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
                 $q->where('neighborhood', 'like', "%{$search}%")
                     ->orWhere('zip_code', 'like', "%{$search}%")
                     ->orWhere('city', 'like', "%{$search}%");
@@ -144,7 +144,7 @@ class CoverageController extends Controller
         return response()->json($area, 201);
     }
 
-    public function update(Request $request, CoverageArea $coverageArea)
+    public function update(Request $request, CoverageArea $coverage)
     {
         $validated = $request->validate([
             'city' => 'sometimes|string',
@@ -154,13 +154,13 @@ class CoverageController extends Controller
             'is_active' => 'sometimes|boolean',
         ]);
 
-        $coverageArea->update($validated);
-        return response()->json($coverageArea);
+        $coverage->update($validated);
+        return response()->json($coverage);
     }
 
-    public function destroy(CoverageArea $coverageArea)
+    public function destroy(CoverageArea $coverage)
     {
-        $coverageArea->delete();
+        $coverage->delete();
         return response()->json(['status' => 'deleted']);
     }
 }

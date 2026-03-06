@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import {
     Search, MessageCircle, Send, UserCheck, Bot, XCircle,
-    Phone, Clock, ArrowLeft
+    Phone, Clock, ArrowLeft, Trash2
 } from 'lucide-react';
 
 function statusBadge(status) {
@@ -148,6 +148,20 @@ export default function Conversations() {
         } catch { }
     }
 
+    async function deleteConversation() {
+        if (!activeConv) return;
+        if (!confirm('¿Estás seguro de que deseas eliminar esta conversación y todos sus mensajes? Esta acción no se puede deshacer.')) return;
+
+        try {
+            await api.delete(`/conversations/${activeConv.id}`);
+            setActiveConv(null);
+            navigate('/panel/conversations', { replace: true });
+            loadConversations();
+        } catch {
+            alert('Error al eliminar la conversación.');
+        }
+    }
+
     function selectConversation(conv) {
         setActiveConv(conv);
         navigate(`/panel/conversations/${conv.id}`, { replace: true });
@@ -288,11 +302,16 @@ export default function Conversations() {
                             )}
 
                             {activeConv.status !== 'closed' && (
-                                <button className="btn btn-ghost btn-sm" onClick={closeConversation} style={{ color: 'var(--color-danger)' }}>
+                                <button className="btn btn-ghost btn-sm" onClick={closeConversation} style={{ color: 'var(--color-warning)' }}>
                                     <XCircle size={14} />
                                     Cerrar
                                 </button>
                             )}
+
+                            <button className="btn btn-ghost btn-sm" onClick={deleteConversation} style={{ color: 'var(--color-danger)' }}>
+                                <Trash2 size={14} />
+                                Eliminar
+                            </button>
                         </div>
                     </div>
 

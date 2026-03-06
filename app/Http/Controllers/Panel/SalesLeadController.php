@@ -22,15 +22,11 @@ class SalesLeadController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function ($q) use ($search) {
+            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($search) {
                 $q->where('plan_interest', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%")
                     ->orWhere('company_name', 'like', "%{$search}%")
-                    ->orWhereHas('contact', function ($sq) use ($search) {
-                    $sq->where('name', 'like', "%{$search}%")
-                        ->orWhere('phone', 'like', "%{$search}%");
-                }
-                );
+                    ->orWhere('contact_name', 'like', "%{$search}%");
             });
         }
 

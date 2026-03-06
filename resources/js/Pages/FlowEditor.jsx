@@ -73,6 +73,8 @@ function StepModal({ step, flow, allFlows, onClose, onSave }) {
         retry_limit: step?.retry_limit || 0,
         is_entry_point: step?.is_entry_point || false,
         sort_order: step?.sort_order || ((flow.steps?.length || 0) + 1),
+        media_file: null,
+        remove_media: false,
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -93,15 +95,35 @@ function StepModal({ step, flow, allFlows, onClose, onSave }) {
         e.preventDefault();
         if (!form.step_key.match(/^[a-z0-9_]+$/)) { setError('El identificador solo puede tener letras minúsculas, números y guión bajo'); return; }
         setError(''); setSaving(true);
-        const payload = {
-            ...form,
-            action_type: form.action_type || null,
-            input_validation: form.input_validation || null,
-            next_step_default: form.next_step_default || null,
-        };
+
+        const formData = new FormData();
+        formData.append('step_key', form.step_key);
+        formData.append('message_text', form.message_text);
+        formData.append('response_type', form.response_type);
+        formData.append('options', JSON.stringify(form.options));
+        if (form.action_type) formData.append('action_type', form.action_type);
+        if (form.action_config) formData.append('action_config', JSON.stringify(form.action_config));
+        if (form.next_step_default) formData.append('next_step_default', form.next_step_default);
+        if (form.input_validation) formData.append('input_validation', form.input_validation);
+        formData.append('retry_limit', form.retry_limit);
+        formData.append('is_entry_point', form.is_entry_point ? 1 : 0);
+        formData.append('sort_order', form.sort_order);
+
+        if (form.media_file) {
+            formData.append('media_file', form.media_file);
+        }
+        if (form.remove_media) {
+            formData.append('remove_media', 'true');
+        }
+
         try {
-            if (isEdit) await api.put(`/flow-steps/${step.id}`, payload);
-            else await api.post(`/flows/${flow.id}/steps`, payload);
+            const config = { headers: { 'Content-Type': 'multipart/form-data' } };
+            if (isEdit) {
+                formData.append('_method', 'PUT');
+                await api.post(`/flow-steps/${step.id}`, formData, config);
+            } else {
+                await api.post(`/flows/${flow.id}/steps`, formData, config);
+            }
             onSave();
         } catch (err) { setError(err.response?.data?.message || 'Error al guardar'); }
         finally { setSaving(false); }
@@ -145,6 +167,26 @@ function StepModal({ step, flow, allFlows, onClose, onSave }) {
                             <label className="form-label">Mensaje del Bot</label>
                             <textarea className="form-input" value={form.message_text} onChange={e => set('message_text', e.target.value)} rows={4} placeholder="El mensaje que el bot enviará al usuario...&#10;Usa {{variable}} para datos dinámicos" required />
                             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Variables: {'{{customer_name}}'} {'{{zip_code}}'} {'{{plan_name}}'} {'{{coverage_zones}}'}</span>
+                        </div>
+
+                        {/* Media Attachment */}
+                        <div className="form-group" style={{ background: 'var(--bg-app)', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
+                            <label className="form-label" style={{ display: 'block', marginBottom: 8 }}>Archivo Adjunto (Opcional)</label>
+                            {step?.media_path && !form.remove_media ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    {step.media_type === 'image' ? (
+                                        <img src={step.media_path} alt="adjunto" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} />
+                                    ) : (
+                                        <div style={{ padding: '8px 12px', background: 'white', borderRadius: 4, fontSize: '0.8rem', fontWeight: 600 }}>PDF / Doc</div>
+                                    )}
+                                    <button type="button" className="btn btn-ghost btn-sm" style={{ color: 'var(--color-danger)' }} onClick={() => set('remove_media', true)}>Quitar archivo</button>
+                                </div>
+                            ) : (
+                                <div>
+                                    <input type="file" className="form-input" accept="image/*,.pdf" onChange={e => { set('media_file', e.target.files[0]); set('remove_media', false); }} />
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: 4 }}>Puedes subir imágenes o PDFs. Max 10MB.</span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Response type + Action */}

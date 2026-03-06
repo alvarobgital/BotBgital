@@ -10,6 +10,7 @@ class BotFlowStep extends Model
         'bot_flow_id', 'step_key', 'message_text', 'response_type',
         'options', 'action_type', 'action_config', 'next_step_default',
         'input_validation', 'retry_limit', 'is_entry_point', 'sort_order',
+        'media_path', 'media_type'
     ];
 
     protected function casts(): array

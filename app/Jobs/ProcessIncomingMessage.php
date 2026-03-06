@@ -48,6 +48,20 @@ class ProcessIncomingMessage implements ShouldQueue
         $responseText = $response['text'] ?? '';
 
         try {
+            $textSentAsCaption = false;
+
+            if (!empty($response['media_path'])) {
+                $mediaUrl = asset($response['media_path']);
+                // If it's just text, we send it as a caption. If it has buttons/lists, we send media separately.
+                if (empty($response['list_sections']) && empty($response['buttons'])) {
+                    $whatsApp->sendMedia($phone, $mediaUrl, $response['media_type'], $responseText);
+                    $textSentAsCaption = true;
+                }
+                else {
+                    $whatsApp->sendMedia($phone, $mediaUrl, $response['media_type']);
+                }
+            }
+
             // Determine message type and send accordingly
             if (!empty($response['list_sections'])) {
                 // WhatsApp Interactive List
@@ -68,8 +82,8 @@ class ProcessIncomingMessage implements ShouldQueue
                 }
                 $whatsApp->sendInteractiveButtons($phone, $responseText, $buttonMap);
             }
-            else {
-                // Plain text
+            elseif (!$textSentAsCaption && $responseText !== '') {
+                // Plain text Only
                 $whatsApp->sendText($phone, $responseText);
             }
 
