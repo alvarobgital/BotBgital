@@ -80,4 +80,12 @@ class ConversationController extends Controller
 
         return response()->json($conversation->fresh(['contact', 'assignedAgent']));
     }
+
+    public function destroy(Conversation $conversation)
+    {
+        $conversation->messages()->delete();
+        \App\Models\SalesLead::where('conversation_id', $conversation->id)->update(['conversation_id' => null]);
+        $conversation->delete();
+        return response()->json(['message' => 'Conversation deleted successfully']);
+    }
 }

@@ -29,7 +29,7 @@ class SettingsController extends Controller
         // Handle Logo upload
         if ($request->hasFile('company_logo')) {
             $request->validate([
-                'company_logo' => 'image|mimes:jpeg,png,jpg,svg|max:2048',
+                'company_logo' => 'image|mimes:jpeg,png,jpg,svg,webp,gif|max:5120',
             ]);
 
             $path = $request->file('company_logo')->store('logos', 'public');

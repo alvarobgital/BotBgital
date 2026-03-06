@@ -244,7 +244,7 @@ class BotEngineService
 
             if ($results->count() > 0) {
                 $data['zip_code'] = $zip;
-                $data['coverage_zones'] = $results->pluck('neighborhood')->unique()->take(4)->implode(', ');
+                $data['coverage_zones'] = "\n⚠️ IMPORTANTE: Solo tenemos cobertura en estas colonias del CP {$zip}:\n👉 " . $results->pluck('neighborhood')->unique()->take(6)->implode(', ');
                 $conversation->bot_state_data = $data;
                 $conversation->save();
                 return []; // Go to success next_step
@@ -280,13 +280,10 @@ class BotEngineService
         }
 
         if ($actionType === 'show_plan_categories') {
-            // Usually handled with buttons, this returns action_only. 
-            // Our CRM step for 'show_categories' actually has `next_step_default => show_plans`.
             return [];
         }
 
         if ($actionType === 'show_plans') {
-            // Also handled in list menu for planes
             return [];
         }
 
@@ -303,7 +300,10 @@ class BotEngineService
                 continue;
 
             foreach ($kws as $kw) {
-                if (Str::contains($text, mb_strtolower(trim($kw)))) {
+                if (mb_strlen($kw) > 3 && $this->fuzzyMatch($text, mb_strtolower(trim($kw)))) {
+                    return $flow;
+                }
+                elseif (Str::contains($text, mb_strtolower(trim($kw)))) {
                     return $flow;
                 }
             }
@@ -321,7 +321,7 @@ class BotEngineService
     {
         $btns = [];
         foreach (array_slice($options, 0, 3) as $opt) {
-            $btns[] = ['type' => 'reply', 'reply' => ['id' => $opt['id'], 'title' => substr($opt['title'], 0, 20)]];
+            $btns[] = ['type' => 'reply', 'reply' => ['id' => $opt['id'], 'title' => mb_substr($opt['title'], 0, 20)]];
         }
         return ['type' => 'text', 'text' => $msg, 'buttons' => $btns];
     }
@@ -331,9 +331,9 @@ class BotEngineService
         $rows = [];
         foreach (array_slice($options, 0, 10) as $opt) {
             $rows[] = [
-                'id' => substr($opt['id'], 0, 200),
-                'title' => substr($opt['title'], 0, 24),
-                'description' => substr($opt['description'] ?? '', 0, 72)
+                'id' => mb_substr($opt['id'], 0, 200),
+                'title' => mb_substr($opt['title'], 0, 24),
+                'description' => mb_substr($opt['description'] ?? '', 0, 72)
             ];
         }
 
@@ -354,6 +354,11 @@ class BotEngineService
         $text = str_replace('{{coverage_zones}}', $data['coverage_zones'] ?? '', $text);
         $text = str_replace('{{selected_plan}}', $data['selected_plan'] ?? '', $text);
         $text = str_replace('{{ask_name}}', $data['ask_name'] ?? '', $text);
+
+        if (!Str::contains($text, 'reiniciar')) {
+            $text .= "\n\n_(Puedes escribir *reiniciar* en cualquier momento para empezar una nueva conversación)_";
+        }
+
         return $text;
     }
 
@@ -373,8 +378,20 @@ class BotEngineService
 
     private function fuzzyMatch(string $input, string $target): bool
     {
-        similar_text($input, $target, $sim);
-        return $sim >= 75 || Str::contains($target, $input);
+        if (empty($input) || empty($target))
+            return false;
+
+        $inputWords = explode(' ', $input);
+        foreach ($inputWords as $word) {
+            if (mb_strlen($word) > 3) {
+                similar_text($word, $target, $sim);
+                if ($sim >= 70 || levenshtein($word, $target) <= 2)
+                    return true;
+            }
+        }
+
+        similar_text($input, $target, $simTotal);
+        return $simTotal >= 70 || Str::contains($target, $input);
     }
 
     private function workHours(): string

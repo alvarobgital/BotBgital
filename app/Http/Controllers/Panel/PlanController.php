@@ -132,7 +132,7 @@ class PlanController extends Controller
 
         // Map column aliases
         $catAliases = ['tipo', 'category', 'categoria', 'categoría', 'type'];
-        $nameAliases = ['nombre', 'name', 'plan', 'plan_name'];
+        $nameAliases = ['nombre', 'name', 'plan', 'plan_name', 'nombre del plan'];
         $speedAliases = ['velocidad', 'speed', 'velocidad_mbps', 'mbps'];
         $priceAliases = ['precio', 'price', 'costo', 'cost'];
         $descAliases = ['descripcion', 'descripción', 'description', 'desc'];

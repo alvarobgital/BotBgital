@@ -32,7 +32,7 @@ export default function Dashboard() {
 
             {/* Stat Cards — Row 1 */}
             <div className="dashboard-grid">
-                <div className="dashboard-card">
+                <div className="dashboard-card" style={{ cursor: 'pointer' }} onClick={() => window.location.href = '/panel/conversations'}>
                     <div className="card-icon-box">
                         <MessageSquare size={24} />
                     </div>
@@ -42,7 +42,7 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                <div className="dashboard-card">
+                <div className="dashboard-card" style={{ cursor: 'pointer' }} onClick={() => window.location.href = '/panel/conversations?status=bot_active'}>
                     <div className="card-icon-box" style={{ background: '#ECFDF5', color: 'var(--color-success)' }}>
                         <Bot size={24} />
                     </div>
@@ -52,7 +52,7 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                <div className="dashboard-card">
+                <div className="dashboard-card" style={{ cursor: 'pointer' }} onClick={() => window.location.href = '/panel/conversations?status=waiting_agent'}>
                     <div className="card-icon-box" style={{ background: '#FFF7ED', color: 'var(--color-warning)' }}>
                         <AlertTriangle size={24} />
                     </div>
@@ -62,7 +62,7 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                <div className="dashboard-card">
+                <div className="dashboard-card" style={{ cursor: 'pointer' }} onClick={() => window.location.href = '/panel/leads'}>
                     <div className="card-icon-box" style={{ background: '#EEF2FF', color: '#4338CA' }}>
                         <Zap size={24} />
                     </div>
@@ -72,7 +72,7 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                <div className="dashboard-card">
+                <div className="dashboard-card" style={{ cursor: 'pointer' }} onClick={() => window.location.href = '/panel/customers'}>
                     <div className="card-icon-box" style={{ background: '#F0FDF4', color: '#16A34A' }}>
                         <Users size={24} />
                     </div>
@@ -85,7 +85,7 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                <div className="dashboard-card">
+                <div className="dashboard-card" style={{ cursor: 'pointer' }} onClick={() => window.location.href = '/panel/tickets'}>
                     <div className="card-icon-box" style={{ background: '#FEF2F2', color: 'var(--color-danger)' }}>
                         <Ticket size={24} />
                     </div>
