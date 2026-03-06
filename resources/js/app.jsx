@@ -9,12 +9,24 @@ import FlowEditor from './Pages/FlowEditor';
 import Contacts from './Pages/Contacts';
 import Settings from './Pages/Settings';
 import Tickets from './Pages/Tickets';
+import Users from './Pages/Users';
+import Coverage from './Pages/Coverage';
+import Customers from './Pages/Customers';
+import Plans from './Pages/Plans';
+import Leads from './Pages/Leads';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 function ProtectedRoute({ children }) {
     const { user, loading } = useAuth();
     if (loading) return <div className="loading-spinner"><div className="spinner"></div></div>;
     if (!user) return <Navigate to="/login" replace />;
+    return children;
+}
+
+function AdminRoute({ children }) {
+    const { user, loading } = useAuth();
+    if (loading) return <div className="loading-spinner"><div className="spinner"></div></div>;
+    if (user?.role !== 'admin') return <Navigate to="/panel" replace />;
     return children;
 }
 
@@ -35,7 +47,16 @@ function App() {
                         <Route path="tickets" element={<Tickets />} />
                         <Route path="flows" element={<FlowEditor />} />
                         <Route path="contacts" element={<Contacts />} />
+                        <Route path="coverage" element={<Coverage />} />
+                        <Route path="customers" element={<Customers />} />
+                        <Route path="plans" element={<Plans />} />
+                        <Route path="leads" element={<Leads />} />
                         <Route path="settings" element={<Settings />} />
+                        <Route path="users" element={
+                            <AdminRoute>
+                                <Users />
+                            </AdminRoute>
+                        } />
                     </Route>
                     <Route path="*" element={<Navigate to="/panel" replace />} />
                 </Routes>

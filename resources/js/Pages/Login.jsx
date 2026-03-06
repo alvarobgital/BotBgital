@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Zap, Mail, Lock, LogIn } from 'lucide-react';
+import { Zap, Mail, Lock, LogIn, Eye, EyeOff } from 'lucide-react';
 
 export default function Login() {
     const { login } = useAuth();
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -20,7 +21,7 @@ export default function Login() {
             await login(email, password);
             navigate('/panel');
         } catch (err) {
-            setError(err.response?.data?.message || 'Error al iniciar sesión');
+            setError(err.response?.data?.message || 'Credenciales incorrectas');
         } finally {
             setLoading(false);
         }
@@ -30,20 +31,18 @@ export default function Login() {
         <div className="login-page">
             <div className="login-card">
                 <div className="login-logo">
-                    <Zap size={28} style={{ display: 'inline', verticalAlign: 'middle' }} /> BotBgital
+                    <Zap size={22} /> BotBgital
                 </div>
                 <h1>Iniciar Sesión</h1>
-                <p className="login-subtitle">Panel de administración</p>
+                <p className="login-subtitle">Accede al panel de administración</p>
 
                 <form onSubmit={handleSubmit}>
                     {error && (
                         <div style={{
-                            background: 'rgba(239,68,68,0.08)',
-                            color: '#dc2626',
-                            padding: '10px 14px',
-                            borderRadius: 'var(--radius-md)',
-                            fontSize: '0.85rem',
-                            marginBottom: 18,
+                            background: '#FEF2F2', color: '#DC2626',
+                            padding: '10px 14px', borderRadius: '8px',
+                            fontSize: '0.85rem', marginBottom: 20,
+                            border: '1px solid #FECACA'
                         }}>
                             {error}
                         </div>
@@ -54,12 +53,12 @@ export default function Login() {
                         <div style={{ position: 'relative' }}>
                             <Mail size={16} style={{
                                 position: 'absolute', left: 12, top: '50%',
-                                transform: 'translateY(-50%)', color: 'rgba(26,21,48,0.3)'
+                                transform: 'translateY(-50%)', color: 'var(--text-muted)'
                             }} />
                             <input
                                 type="email"
                                 className="form-input"
-                                style={{ paddingLeft: 38 }}
+                                style={{ paddingLeft: 36 }}
                                 placeholder="admin@bgital.mx"
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
@@ -73,28 +72,41 @@ export default function Login() {
                         <div style={{ position: 'relative' }}>
                             <Lock size={16} style={{
                                 position: 'absolute', left: 12, top: '50%',
-                                transform: 'translateY(-50%)', color: 'rgba(26,21,48,0.3)'
+                                transform: 'translateY(-50%)', color: 'var(--text-muted)'
                             }} />
                             <input
-                                type="password"
+                                type={showPassword ? 'text' : 'password'}
                                 className="form-input"
-                                style={{ paddingLeft: 38 }}
+                                style={{ paddingLeft: 36, paddingRight: 40 }}
                                 placeholder="••••••••"
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
                                 required
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                style={{
+                                    position: 'absolute', right: 8, top: '50%',
+                                    transform: 'translateY(-50%)', background: 'none',
+                                    border: 'none', cursor: 'pointer', padding: 4,
+                                    color: 'var(--text-muted)', display: 'flex',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
                         </div>
                     </div>
 
                     <button
                         type="submit"
-                        className="btn btn-primary btn-lg btn-block"
+                        className="btn btn-primary btn-block btn-lg"
                         disabled={loading}
                         style={{ marginTop: 8 }}
                     >
                         {loading ? (
-                            <div className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }}></div>
+                            <div className="spinner" style={{ width: 20, height: 20, borderWidth: 2 }} />
                         ) : (
                             <>
                                 <LogIn size={18} />

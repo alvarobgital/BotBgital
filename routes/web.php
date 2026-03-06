@@ -11,6 +11,10 @@ use App\Http\Controllers\Panel\MessageController;
 use App\Http\Controllers\Panel\SettingsController;
 use App\Http\Controllers\Panel\UserController;
 use App\Http\Controllers\Panel\TicketController;
+use App\Http\Controllers\Panel\CoverageController;
+use App\Http\Controllers\Panel\CustomerController;
+use App\Http\Controllers\Panel\PlanController;
+use App\Http\Controllers\Panel\SalesLeadController;
 
 // Panel APIs using 'web' middleware for sessions natively
 Route::group(['prefix' => 'api', 'middleware' => ['web']], function () {
@@ -26,6 +30,33 @@ Route::group(['prefix' => 'api', 'middleware' => ['web']], function () {
             Route::get('/tickets', [TicketController::class , 'index']);
             Route::get('/tickets/{ticket}', [TicketController::class , 'show']);
             Route::put('/tickets/{ticket}', [TicketController::class , 'update']);
+
+            // Users Management
+            Route::get('/users', [UserController::class , 'index']);
+            Route::post('/users', [UserController::class , 'store']);
+            Route::delete('/users/{user}', [UserController::class , 'destroy']);
+
+            // Coverage Areas
+            Route::post('/coverage/import', [CoverageController::class , 'import']);
+            Route::delete('/coverage/clear-all', [CoverageController::class , 'clearAll']);
+            Route::apiResource('/coverage', CoverageController::class);
+
+            // Customers Management
+            Route::apiResource('/customers', CustomerController::class);
+            Route::post('/customers/{customer}/services', [CustomerController::class , 'addService']);
+            Route::put('/customer-services/{service}', [CustomerController::class , 'updateService']);
+            Route::delete('/customer-services/{service}', [CustomerController::class , 'removeService']);
+
+            // Plans Management
+            Route::post('/plans/import', [PlanController::class , 'importPlans']);
+            Route::post('/plans/{plan}/toggle', [PlanController::class , 'toggleActive']);
+            Route::apiResource('/plans', PlanController::class);
+
+            // Leads / Sales
+            Route::get('/leads/stats', [SalesLeadController::class , 'stats']);
+            Route::get('/leads', [SalesLeadController::class , 'index']);
+            Route::put('/leads/{salesLead}', [SalesLeadController::class , 'update']);
+            Route::delete('/leads/{salesLead}', [SalesLeadController::class , 'destroy']);
 
             // Dashboard
             Route::get('/dashboard/stats', [DashboardController::class , 'index']);
@@ -50,6 +81,11 @@ Route::group(['prefix' => 'api', 'middleware' => ['web']], function () {
             Route::delete('/flows/{flow}', [FlowController::class , 'destroy']);
             Route::post('/flows/{flow}/toggle', [FlowController::class , 'toggleActive']);
 
+            // Flow Steps
+            Route::post('/flows/{flow}/steps', [FlowController::class , 'storeStep']);
+            Route::put('/flow-steps/{step}', [FlowController::class , 'updateStep']);
+            Route::delete('/flow-steps/{step}', [FlowController::class , 'destroyStep']);
+
             // Contacts
             Route::get('/contacts', [ContactController::class , 'index']);
             Route::get('/contacts/{contact}', [ContactController::class , 'show']);
@@ -60,13 +96,9 @@ Route::group(['prefix' => 'api', 'middleware' => ['web']], function () {
             Route::put('/settings', [SettingsController::class , 'update']);
             Route::post('/settings/toggle-bot', [SettingsController::class , 'toggleBot']);
 
-            // Users
-            Route::get('/users', [UserController::class , 'index']);
-            Route::post('/users', [UserController::class , 'store']);
-            Route::put('/users/{user}', [UserController::class , 'update']);
-            Route::delete('/users/{user}', [UserController::class , 'destroy']);
         }
-        );    });
+        );
+    });
 
 // React SPA catch-all (ignoring /api)
 Route::get('/{any?}', function () {

@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { Search, Users, Phone, Calendar } from 'lucide-react';
+import { Search, Zap, Phone, Calendar } from 'lucide-react';
 
 export default function Contacts() {
     const [contacts, setContacts] = useState([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        loadContacts();
-    }, [search]);
+    useEffect(() => { loadContacts(); }, [search]);
 
     async function loadContacts() {
         try {
@@ -22,52 +20,50 @@ export default function Contacts() {
 
     function formatDate(dateStr) {
         if (!dateStr) return '—';
-        return new Date(dateStr).toLocaleDateString('es-MX', {
-            day: '2-digit', month: 'short', year: 'numeric'
-        });
+        return new Date(dateStr).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
     }
 
     return (
-        <>
+        <div className="fade-in">
             <div className="page-header">
-                <h1>Contactos</h1>
-                <p>Todos los contactos que han interactuado con el bot</p>
+                <h1>Leads / Contactos</h1>
+                <p>Personas que han interactuado con el bot</p>
             </div>
-            <div className="page-body">
-                <div style={{ marginBottom: 16 }}>
-                    <div className="conversation-search" style={{ maxWidth: 400, background: 'var(--color-white)', border: '1.5px solid var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
-                        <Search size={18} />
-                        <input placeholder="Buscar por nombre o teléfono..."
-                            value={search} onChange={e => setSearch(e.target.value)} />
-                    </div>
-                </div>
 
-                {loading ? (
-                    <div className="loading-spinner"><div className="spinner"></div></div>
-                ) : contacts.length === 0 ? (
-                    <div className="empty-state">
-                        <Users />
-                        <p>No hay contactos</p>
-                    </div>
-                ) : (
-                    <table className="data-table">
+            <div className="card" style={{ margin: '0 32px 20px', padding: '16px 20px' }}>
+                <div style={{ maxWidth: 400, position: 'relative' }}>
+                    <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input className="form-input" style={{ paddingLeft: 36 }} placeholder="Buscar por nombre o teléfono..." value={search} onChange={e => setSearch(e.target.value)} />
+                </div>
+            </div>
+
+            {loading ? (
+                <div className="loading-spinner"><div className="spinner"></div></div>
+            ) : contacts.length === 0 ? (
+                <div className="empty-state">
+                    <Zap size={48} />
+                    <p>No hay contactos registrados</p>
+                </div>
+            ) : (
+                <div className="table-container">
+                    <table className="table">
                         <thead>
                             <tr>
                                 <th>Nombre</th>
                                 <th>Teléfono</th>
                                 <th>Plataforma</th>
-                                <th>Última conversación</th>
+                                <th>Última Conversación</th>
                                 <th>Registrado</th>
                             </tr>
                         </thead>
                         <tbody>
                             {contacts.map(contact => (
                                 <tr key={contact.id}>
-                                    <td style={{ fontWeight: 600, fontFamily: 'var(--font-display)' }}>
+                                    <td style={{ fontWeight: 600 }}>
                                         {contact.name || 'Desconocido'}
                                     </td>
-                                    <td>
-                                        <Phone size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', opacity: 0.5 }} />
+                                    <td style={{ color: 'var(--text-secondary)' }}>
+                                        <Phone size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', opacity: .5 }} />
                                         {contact.phone}
                                     </td>
                                     <td>
@@ -81,16 +77,16 @@ export default function Contacts() {
                                             : '—'
                                         }
                                     </td>
-                                    <td>
-                                        <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', opacity: 0.5 }} />
+                                    <td style={{ color: 'var(--text-secondary)' }}>
+                                        <Calendar size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle', opacity: .5 }} />
                                         {formatDate(contact.created_at)}
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
-                )}
-            </div>
-        </>
+                </div>
+            )}
+        </div>
     );
 }

@@ -110,7 +110,22 @@ class BotFlowSeeder extends Seeder
         // Vinculamos el paso 1 al paso 2 como seguimiento
         $step1->update(['follow_up_to' => $step2->id]);
 
-    // El motor del bot detectará que después del Step 2 no hay más flujos 
-    // y ofrecerá crear el ticket automáticamente.
+        // El motor del bot detectará que después del Step 2 no hay más flujos 
+        // y ofrecerá crear el ticket automáticamente.
+
+        // 3. Consulta de Cobertura
+        BotFlow::updateOrCreate(
+        ['category' => 'consulta_cobertura'],
+        [
+            'trigger_keywords' => ['cobertura', 'donde llegan', 'hay servicio', 'tienen red', 'llegada', 'zona'],
+            'response_text' => "🔍 *Verificador de Cobertura Bgital*\n\nNuestra red de fibra óptica se expande cada día. Por favor, dime tu *Código Postal* de 5 dígitos para verificar la disponibilidad en tu calle:",
+            'response_type' => 'coverage_checker',
+            'response_data' => [
+                'zip_codes' => ['06000', '06140', '06700', '52760', '52763', '52764'] // CPs de ejemplo
+            ],
+            'is_active' => true,
+            'sort_order' => 15,
+        ]
+        );
     }
 }

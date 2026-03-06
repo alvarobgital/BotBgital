@@ -2,58 +2,68 @@
 
 namespace App\Services;
 
-use App\Models\NotificationsLog;
+use App\Models\Setting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
-use App\Models\Setting;
 
 class TelegramService
 {
-    /**
-     * Send notification to the Bgital team Telegram group.
-     */
-    public function notifyTeam(string $message, ?int $conversationId = null): bool
+    public static function sendMessage($message)
     {
-        $botToken = Setting::getValue('telegram_bot_token');
+        $token = Setting::getValue('telegram_bot_token');
         $chatId = Setting::getValue('telegram_notify_group_id');
 
-        if (empty($botToken) || empty($chatId)) {
-            Log::warning('Telegram not configured — skipping notification');
-            $this->logNotification('telegram', $chatId ?? 'not_configured', 'Team Notification', $message, $conversationId, 'failed');
+        if (!$token || !$chatId) {
+            Log::warning('TelegramService: Token or ChatID not configured');
             return false;
         }
 
         try {
-            $url = "https://api.telegram.org/bot{$botToken}/sendMessage";
-
+            $url = "https://api.telegram.org/bot{$token}/sendMessage";
             $response = Http::post($url, [
                 'chat_id' => $chatId,
                 'text' => $message,
-                'parse_mode' => 'HTML',
+                'parse_mode' => 'Markdown'
             ]);
-
-            $status = $response->successful() ? 'sent' : 'failed';
-            $this->logNotification('telegram', $chatId, 'Team Notification', $message, $conversationId, $status);
 
             return $response->successful();
         }
         catch (\Exception $e) {
-            Log::error('Telegram notification failed: ' . $e->getMessage());
-            $this->logNotification('telegram', $chatId, 'Team Notification', $message, $conversationId, 'failed');
+            Log::error('TelegramService Error: ' . $e->getMessage());
             return false;
         }
     }
 
-    protected function logNotification(string $type, string $recipient, string $subject, string $body, ?int $conversationId, string $status): void
+    public static function notifyNewLead($customerName, $phone, $planName)
     {
-        NotificationsLog::create([
-            'type' => $type,
-            'recipient' => $recipient,
-            'subject' => $subject,
-            'body' => $body,
-            'conversation_id' => $conversationId,
-            'sent_at' => now(),
-            'status' => $status,
-        ]);
+        $text = "🚀 *Nuevo Interés de Contratación*\n\n";
+        $text .= "👤 *Nombre:* {$customerName}\n";
+        $text .= "📱 *WhatsApp:* {$phone}\n";
+        $text .= "📦 *Plan:* {$planName}\n\n";
+        $text .= "📩 _El bot ha asistido al prospecto, por favor contactar para cierre._";
+
+        return self::sendMessage($text);
+    }
+
+    public static function notifySupportRequired($customerName, $phone, $problem, $accountNumber = 'Desconocido')
+    {
+        $text = "🚨 *Soporte Requerido*\n\n";
+        $text .= "👤 *Cliente:* {$customerName}\n";
+        $text .= "🔢 *Cuenta:* {$accountNumber}\n";
+        $text .= "📱 *WhatsApp:* {$phone}\n";
+        $text .= "⚠️ *Problema:* {$problem}\n\n";
+        $text .= "🔧 _El cliente no pudo solucionar el problema con el bot. Se requiere técnico._";
+
+        return self::sendMessage($text);
+    }
+
+    public static function notifyNoCoverageLead($phone, $zipCode, $neighborhood)
+    {
+        $text = "📍 *Prospecto Fuera de Cobertura*\n\n";
+        $text .= "📱 *WhatsApp:* {$phone}\n";
+        $text .= "📮 *Zona:* CP {$zipCode}, {$neighborhood}\n\n";
+        $text .= "🤝 _Interesado en negociar cobertura en su zona._";
+
+        return self::sendMessage($text);
     }
 }

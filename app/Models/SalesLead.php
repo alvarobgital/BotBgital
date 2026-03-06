@@ -7,8 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 class SalesLead extends Model
 {
     protected $fillable = [
-        'contact_id', 'conversation_id', 'plan_interest', 'rfc', 'curp',
-        'address_proof_path', 'status',
+        'contact_id', 'conversation_id', 'plan_interest', 'client_type',
+        'zip_code', 'company_name', 'phone', 'notes', 'source',
+        'assigned_to', 'rfc', 'curp', 'address_proof_path', 'status',
     ];
 
     public function contact()
@@ -19,5 +20,10 @@ class SalesLead extends Model
     public function conversation()
     {
         return $this->belongsTo(Conversation::class);
+    }
+
+    public function assignedUser()
+    {
+        return $this->belongsTo(User::class , 'assigned_to');
     }
 }
