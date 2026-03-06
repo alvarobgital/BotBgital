@@ -78,7 +78,7 @@ class PlanController extends Controller
     public function importPlans(Request $request)
     {
         $request->validate([
-            'file' => 'required|file|mimes:csv,txt,xlsx,xls'
+            'file' => 'required|file|max:5120'
         ]);
 
         $file = $request->file('file');

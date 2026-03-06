@@ -54,7 +54,9 @@ export default function Conversations() {
     const [sending, setSending] = useState(false);
     const [loading, setLoading] = useState(true);
     const messagesEndRef = useRef(null);
+    const chatContainerRef = useRef(null);
     const pollRef = useRef(null);
+    const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
 
     useEffect(() => {
         loadConversations();
@@ -63,7 +65,10 @@ export default function Conversations() {
     }, [filter, search]);
 
     useEffect(() => {
-        if (id) loadConversation(id);
+        if (id) {
+            loadConversation(id);
+            setShouldAutoScroll(true);
+        }
     }, [id]);
 
     useEffect(() => {
@@ -76,11 +81,19 @@ export default function Conversations() {
     }, [activeConv?.id]);
 
     useEffect(() => {
-        scrollToBottom();
+        if (shouldAutoScroll) {
+            scrollToBottom();
+        }
     }, [messages]);
 
     function scrollToBottom() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function handleScroll(e) {
+        const { scrollTop, scrollHeight, clientHeight } = e.target;
+        const isNearBottom = scrollHeight - scrollTop - clientHeight < 150;
+        setShouldAutoScroll(isNearBottom);
     }
 
     async function loadConversations() {
@@ -316,7 +329,7 @@ export default function Conversations() {
                     </div>
 
                     {/* Messages */}
-                    <div className="chat-messages">
+                    <div className="chat-messages" ref={chatContainerRef} onScroll={handleScroll}>
                         {messages.map(msg => (
                             <div
                                 key={msg.id}

@@ -23,9 +23,11 @@ class BotEngineService
         }
 
         // 2. Global Commands (e.g. Menu)
-        if (in_array($normalizedText, ['menu', 'inicio', 'menú', 'salir', 'reiniciar', 'nueva conversacion', 'nueva', 'empezar de nuevo'])) {
+        $isGlobalRestart = false;
+        if (in_array($normalizedText, ['menu', 'inicio', 'menú', 'salir', 'reiniciar', 'nueva conversacion', 'nueva', 'empezar de nuevo']) || str_contains($normalizedText, 'reiniciar')) {
             $this->resetState($conversation);
             $conversation->refresh();
+            $isGlobalRestart = true;
         }
 
         // 3. Current active step execution
@@ -33,6 +35,16 @@ class BotEngineService
             $currentStep = BotFlowStep::where('step_key', $conversation->bot_state)->first();
             if ($currentStep) {
                 return $this->processStepInput($conversation, $currentStep, $text, $normalizedText);
+            }
+        }
+
+        // If manually restarted, force entry to MAIN flow
+        if ($isGlobalRestart) {
+            $mainFlow = BotFlow::where('flow_type', 'main')->where('is_active', true)->orderByDesc('flow_priority')->orderBy('sort_order')->first();
+            if ($mainFlow) {
+                $entryStep = $mainFlow->steps()->where('is_entry_point', true)->first();
+                if ($entryStep)
+                    return $this->executeStep($conversation, $entryStep);
             }
         }
 
@@ -54,7 +66,7 @@ class BotEngineService
             }
         }
 
-        return $this->text("🤔 No entendí tu mensaje. Escribe *Menú* para reiniciar.");
+        return $this->text("🤔 No entendí tu mensaje.\n\n_(Puedes escribir *reiniciar* en cualquier momento para empezar una nueva conversación)_");
     }
 
     private function processStepInput(Conversation $conversation, BotFlowStep $step, string $rawText, string $normalizedText): array
@@ -199,7 +211,17 @@ class BotEngineService
 
             $reason = $config['reason'] ?? 'Solicitud desde flujo conversacional';
             $name = $data['customer_name'] ?? $conversation->contact->name ?? $conversation->contact->phone;
-            TelegramService::sendMessage("👨‍💻 *Escalación a Asesor*\n\n👤 {$name}\n📱 {$conversation->contact->phone}\n📝 {$reason}");
+
+            $messages = $conversation->messages()->orderByDesc('created_at')->take(4)->get()->reverse();
+            $recentTxt = "";
+            foreach ($messages as $msg) {
+                $sender = $msg->direction === 'inbound' ? '👤 Cliente' : '🤖 Bot';
+                $recentTxt .= "_{$sender}:_ {$msg->content}\n";
+            }
+            if (empty($recentTxt))
+                $recentTxt = "Sin mensajes previos.";
+
+            TelegramService::sendMessage("👨‍💻 *Escalación a Asesor*\n\n👤 {$name}\n📱 {$conversation->contact->phone}\n📝 {$reason}\n\n💬 *Últimos Mensajes:*\n{$recentTxt}");
 
             return $this->text("👨‍💻 He desactivado el bot para esta conversación.\nUn asesor te atenderá personalmente.\n\n" . $this->workHours());
         }
