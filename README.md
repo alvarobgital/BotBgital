@@ -1,59 +1,93 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# BotBgital CRM & Automatización de WhatsApp
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Un sistema integral de facturación, CRM y bot conversacional para WhatsApp, diseñado para ofrecer una experiencia escalable, intuitiva y profesional. Gestiona clientes, automatiza respuestas, proporciona soporte técnico y procesa prospectos de venta con una interfaz moderna y fluida.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🚀 Características Principales
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 🤖 Bot Conversacional Engine
+- **Motor Dinámico (BotEngineService):** Respuestas automatizadas fluidas con validaciones completas, sin interrupciones ni bloqueos de sesión. Ejecución de flujos lógicos con soporte multimedial.
+- **Flujos Visuales (FlowEditor):** Creación y edición de flujos transaccionales mediante un editor visual en el Panel de Administración (ej: Bienvenida, Soporte, Validación de Cliente).
+- **Atajos Globales:** Control conversacional 24/7 con atajos como `menú`, `inicio`, `reiniciar`, `nueva conversacion`, permitiendo al usuario volver al estado inicial en cualquier momento.
+- **Soporte Multimedia:** Envío de imágenes y documentos (PDF) de forma integrada dentro de cada paso del flujo, ideal para guías y soporte técnico.
+- **Seguridad UTF-8:** Compatibilidad absoluta con emojis y caracteres especiales mexicanos dentro de listas e interfaces interactivas de WhatsApp (Meta API).
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 👥 CRM y Gestión de Clientes
+- **Módulo de Coberturas:** Verificación automática de la disponibilidad del servicio por Código Postal (CP), detectando al instante zonas válidas.
+- **Gestión de Leads (Prospectos):** Almacenamiento ágil de usuarios interesados, organizados por estado (Pendiente, Contactado, Descartado, etc.), incluyendo interés por categorías.
+- **Administración de Clientes y Servicios:** Asignación de servicios a clientes mediante números de cuenta fijos y validación estricta desde el Bot.
+- **Planes Dinámicos:** Mantenimiento de catálogo de planes (Hogar, Negocio, Dedicado) visualizados como menús desplegables directo en el celular del cliente.
+- **Archivado e Historial de Conversaciones:** Módulo de chat en vivo y posibilidad de eliminar definitivamente conversaciones del historial.
 
-## Learning Laravel
+### 🔔 Notificaciones y Configuraciones
+- **Integración Telegram:** Escalamiento en tiempo real. Cuando un usuario requiere un humano (ej., soporte urgente o interés de venta), el Bot alerta de inmediato al grupo de asesores asignado en Telegram.
+- **Ajustes de Interfaz Blanca (White Label):** Configuración visual que incluye la posibilidad de cargar logotipos personalizados en la plataforma y visualizarlos en el panel lateral.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+---
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 💻 Stack Tecnológico y Versiones
 
-## Laravel Sponsors
+Este producto fue construido bajo las mejores prácticas y estándares de la industria, asegurando su fiabilidad en despliegues en la nube.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+*   **Backend Framework:** Laravel 11.x
+*   **Lenguaje:** PHP 8.2+
+*   **Base de Datos:** MySQL / MariaDB (Optimizado con Eloquent ORM)
+*   **Frontend y Vistas:** React 18 con Inertia.js (sin recargas de página)
+*   **Estilizado (CSS):** Tailwind CSS / Vanilla CSS moderno y adaptable (Glassmorphism, animaciones fluidas).
+*   **Iconografía:** Lucide React
+*   **Integraciones API:**
+    *   **WhatsApp Cloud API (Meta API v22.0):** Emisión y recepción asíncrona mediante Webhooks seguros.
+    *   **Telegram Bot API:** Transmisión ultrarrápida de Leads y Escalamientos para staff humano.
+*   **Gestor de Colas:** Laravel Queue (Database Driver) para procesamiento en segundo plano.
 
-### Premium Partners
+---
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## 🛠 Instalación y Despliegue
 
-## Contributing
+### Requisitos Previos
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- Servidor web habilitado con PHP 8.2+
+- Composer & Node.js (v18+)
+- Cuenta Meta Developers activada en modo Producción.
+- Bot de Telegram activo y en grupo administrador.
 
-## Code of Conduct
+### Pasos Iniciales
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+1.  **Clonar este repositorio** en su servidor o entorno de pruebas (ej: Laravel Herd / Hostinger).
+2.  **Instalar dependencias:**
+    ```bash
+    composer install --optimize-autoloader --no-dev
+    npm install
+    npm run build
+    ```
+3.  **Configurar Variables de Entorno (`.env`):**
+    Copie el archivo de ejemplo y defina las variables críticas, especialmente de Meta y Base de Datos:
+    ```bash
+    cp .env.example .env
+    php artisan key:generate
+    ```
+    *(Asegúrese de definir correctamente `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_WEBHOOK_VERIFY_TOKEN` y url del sistema en `APP_URL` y variables `SANCTUM`)*.
+4.  **Ejecutar Migraciones y Seeders:**
+    ```bash
+    php artisan migrate --force
+    php artisan db:seed
+    ```
+5.  **Iniciar Trabajadores de Cola (Queues):**
+    Para manejar los Webhooks sin retardo, se debe mantener activo el worker:
+    ```bash
+    php artisan queue:work --timeout=90 --tries=3
+    ```
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## 🔒 Arquitectura de Seguridad
 
-## License
+*   Tokens de validación Webhook estrictos blindando inyecciones externas.
+*   Sanitización multibyte (`mb_substr`) en el manejo masivo de carga útil para prevenir rupturas en los esquemas JSON de WhatsApp API.
+*   Rutas protegidas por Auth y middleware personalizado para garantizar permisos granulares de administrador.
+*   Normalización automática de lada mexicana (`+521` a `+52`) para acatar las reglas técnicas del Graph API de Meta.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+<br><br>
+
+> *Desarrollado y optimizado por **Alvarobgital**.*
