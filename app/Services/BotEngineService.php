@@ -266,17 +266,16 @@ class BotEngineService
 
             if ($results->count() > 0) {
                 $data['zip_code'] = $zip;
-                $data['coverage_zones'] = "\n⚠️ IMPORTANTE: Solo tenemos cobertura en estas colonias del CP {$zip}:\n👉 " . $results->pluck('neighborhood')->unique()->take(6)->implode(', ');
+                $data['coverage_zones'] = "\n👉 " . $results->pluck('neighborhood')->unique()->sort()->implode("\n👉 ");
                 $conversation->bot_state_data = $data;
                 $conversation->save();
-                return []; // Go to success next_step
+                return ['_next_step' => 'confirm_neighborhood'];
             }
             else {
                 $data['zip_code'] = $zip;
                 $conversation->bot_state_data = $data;
                 $conversation->save();
-                TelegramService::notifyNoCoverageLead($conversation->contact->phone, $zip, 'N/A');
-                return ['_next_step' => 'no_coverage']; // Override routing to the no coverage step!
+                return ['_next_step' => 'select_service_type'];
             }
         }
 

@@ -44,7 +44,7 @@ export default function Plans() {
             if (editingPlan) await api.put(`/plans/${editingPlan.id}`, form);
             else await api.post('/plans', form);
             setShowModal(false); loadPlans();
-        } catch { alert('Error al guardar el plan'); }
+        } catch (err) { alert(err.response?.data?.message || 'Error al guardar el plan. Verifica que todos los campos requeridos estén llenos.'); }
     }
 
     async function handleDelete(id) {

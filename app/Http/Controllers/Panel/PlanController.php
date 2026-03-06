@@ -119,7 +119,12 @@ class PlanController extends Controller
             if (!$header) {
                 return response()->json(['message' => 'Archivo CSV vacío.'], 422);
             }
-            $header = array_map(fn($h) => strtolower(trim($h ?? '')), $header);
+
+            $header = array_map(function ($h) {
+                $h = preg_replace('/^\xEF\xBB\xBF/', '', $h ?? '');
+                return strtolower(trim($h));
+            }, $header);
+
             while (($data = fgetcsv($handle, 2000, $delimiter)) !== false) {
                 $row = [];
                 foreach ($header as $idx => $col) {
@@ -131,10 +136,10 @@ class PlanController extends Controller
         }
 
         // Map column aliases
-        $catAliases = ['tipo', 'category', 'categoria', 'categoría', 'type'];
+        $catAliases = ['tipo', 'category', 'categoria', 'categoría', 'type', 'categoría plan', 'tipo plan', 'tipo de plan'];
         $nameAliases = ['nombre', 'name', 'plan', 'plan_name', 'nombre del plan'];
-        $speedAliases = ['velocidad', 'speed', 'velocidad_mbps', 'mbps'];
-        $priceAliases = ['precio', 'price', 'costo', 'cost'];
+        $speedAliases = ['velocidad', 'speed', 'velocidad_mbps', 'mbps', 'velocidad megas'];
+        $priceAliases = ['precio', 'price', 'costo', 'cost', 'precio de lista', 'coste'];
         $descAliases = ['descripcion', 'descripción', 'description', 'desc'];
 
         $findCol = function ($row, $aliases) {
