@@ -1,19 +1,102 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { Ticket, Search, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Ticket, Search, CheckCircle, Clock, AlertTriangle, Plus, Share2, X } from 'lucide-react';
+
+function TicketModal({ onClose, onSave, contacts }) {
+    const [form, setForm] = useState({
+        contact_id: '',
+        subject: '',
+        description: '',
+        priority: 'medium',
+        status: 'open',
+    });
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        setSaving(true); setError('');
+        try {
+            await api.post('/tickets', form);
+            onSave();
+        } catch (err) {
+            setError(err.response?.data?.message || 'Error al crear ticket');
+        } finally { setSaving(false); }
+    }
+
+    return (
+        <div className="modal-overlay" onClick={onClose}>
+            <div className="modal" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                    <h2>Nuevo Ticket</h2>
+                    <button className="btn-icon" onClick={onClose}><X size={18} /></button>
+                </div>
+                <form onSubmit={handleSubmit}>
+                    <div className="modal-body">
+                        {error && <div style={{ background: '#FEF2F2', color: '#DC2626', padding: '10px', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
+
+                        <div className="form-group">
+                            <label className="form-label">Cliente (Contacto de WhatsApp)</label>
+                            <select className="form-input" value={form.contact_id} onChange={e => setForm({ ...form, contact_id: e.target.value })} required>
+                                <option value="">-- Seleccionar cliente --</option>
+                                {contacts.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name || c.phone}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Asunto (Problema Principal)</label>
+                            <input className="form-input" value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} required placeholder="Ej: Falla masiva zona norte" />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">Descripción Detallada</label>
+                            <textarea className="form-input" rows="4" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required placeholder="Especifique dirección, contexto y pruebas realizadas..." />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                            <div className="form-group">
+                                <label className="form-label">Prioridad</label>
+                                <select className="form-input" value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
+                                    <option value="low">Baja</option>
+                                    <option value="medium">Media</option>
+                                    <option value="high">Alta</option>
+                                    <option value="urgent">Urgente 🚨</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="modal-footer">
+                        <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
+                        <button type="submit" className="btn btn-primary" disabled={saving}>
+                            {saving ? 'Guardando...' : 'Crear Ticket'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
 
 export default function Tickets() {
     const [tickets, setTickets] = useState([]);
+    const [contacts, setContacts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState('all');
+    const [showModal, setShowModal] = useState(false);
 
-    useEffect(() => { loadTickets(); }, []);
+    useEffect(() => { loadData(); }, []);
 
-    async function loadTickets() {
+    async function loadData() {
         try {
-            const res = await api.get('/tickets');
-            setTickets(res.data);
+            const [tRes, cRes] = await Promise.all([
+                api.get('/tickets'),
+                api.get('/contacts?limit=100') // Assume we fetch recent contacts to assign
+            ]);
+            setTickets(tRes.data);
+            setContacts(cRes.data.data || cRes.data || []);
         } catch { } finally { setLoading(false); }
     }
 
@@ -37,11 +120,28 @@ export default function Tickets() {
         closed: { label: 'Cerrado', color: 'var(--text-muted)', bg: '#F1F5F9', icon: CheckCircle },
     };
 
+    function shareTicket(ticket) {
+        const url = `https://wa.me/?text=${encodeURIComponent(
+            `🛠️ *TICKET SOPORTE #${ticket.id}*\n` +
+            `⚠️ *Asunto:* ${ticket.subject}\n` +
+            `🚨 *Prioridad:* ${ticket.priority?.toUpperCase()}\n` +
+            `👤 *Cliente:* ${ticket.contact?.name || ticket.contact?.phone}\n` +
+            `📱 *WhatsApp:* ${ticket.contact?.phone || 'Desconocido'}\n` +
+            `📍 *Dirección/Contexto:* \n${ticket.description}`
+        )}`;
+        window.open(url, '_blank');
+    }
+
     return (
         <div className="fade-in">
-            <div className="page-header">
-                <h1>Tickets de Soporte</h1>
-                <p>Reportes técnicos generados por los usuarios del bot</p>
+            <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                    <h1>Tickets de Soporte</h1>
+                    <p>Reportes técnicos generados por los usuarios del bot o asesores</p>
+                </div>
+                <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                    <Plus size={16} /> Crear Ticket
+                </button>
             </div>
 
             <div className="page-body">
@@ -120,6 +220,9 @@ export default function Tickets() {
                                                     Cerrar
                                                 </button>
                                             )}
+                                            <button className="btn btn-ghost btn-sm btn-block" style={{ color: 'var(--color-primary)' }} onClick={() => shareTicket(ticket)}>
+                                                <Share2 size={14} style={{ marginRight: 6 }} /> Compartir (WA)
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -128,6 +231,10 @@ export default function Tickets() {
                     </div>
                 )}
             </div>
+
+            {showModal && (
+                <TicketModal onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); loadData(); }} contacts={contacts} />
+            )}
         </div>
     );
 }

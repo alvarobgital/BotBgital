@@ -211,8 +211,29 @@ class BotEngineService
 
             $reason = $config['reason'] ?? 'Solicitud desde flujo conversacional';
             $name = $data['customer_name'] ?? $conversation->contact->name ?? $conversation->contact->phone;
+            $isCustomer = $conversation->contact->is_customer ? '✅ Cliente' : '⏳ Posible Cliente';
+            $account = $data['account_number'] ?? 'N/A';
+            $interest = $data['selected_plan'] ?? $data['plan_name'] ?? 'No especificado';
+            $zip = $data['zip_code'] ?? 'N/A';
 
-            $messages = $conversation->messages()->orderByDesc('created_at')->take(4)->get()->reverse();
+            // Auto-create lead if not a customer
+            if (!$conversation->contact->is_customer) {
+                SalesLead::firstOrCreate(
+                [
+                    'contact_id' => $conversation->contact->id,
+                    'status' => 'pending'
+                ],
+                [
+                    'conversation_id' => $conversation->id,
+                    'plan_interest' => $interest,
+                    'client_type' => $data['selected_category'] ?? 'Hogar',
+                    'zip_code' => $zip,
+                    'phone' => $conversation->contact->phone,
+                ]
+                );
+            }
+
+            $messages = $conversation->messages()->orderByDesc('created_at')->take(6)->get()->reverse();
             $recentTxt = "";
             foreach ($messages as $msg) {
                 $sender = $msg->direction === 'inbound' ? '👤 Cliente' : '🤖 Bot';
@@ -221,7 +242,21 @@ class BotEngineService
             if (empty($recentTxt))
                 $recentTxt = "Sin mensajes previos.";
 
-            TelegramService::sendMessage("👨‍💻 *Escalación a Asesor*\n\n👤 {$name}\n📱 {$conversation->contact->phone}\n📝 {$reason}\n\n💬 *Últimos Mensajes:*\n{$recentTxt}");
+            $telegramMsg = "👨‍💻 *Escalación a Asesor*\n\n";
+            $telegramMsg .= "🏷️ *Tipo:* {$isCustomer}\n";
+            $telegramMsg .= "👤 *Nombre:* {$name}\n";
+            $telegramMsg .= "📱 *WhatsApp:* {$conversation->contact->phone}\n";
+            if ($conversation->contact->is_customer) {
+                $telegramMsg .= "🔢 *Cuenta:* {$account}\n";
+            }
+            else {
+                $telegramMsg .= "📍 *CP:* {$zip}\n";
+                $telegramMsg .= "📦 *Interés:* {$interest}\n";
+            }
+            $telegramMsg .= "📝 *Motivo:* {$reason}\n\n";
+            $telegramMsg .= "💬 *Contexto Reciente:*\n{$recentTxt}";
+
+            TelegramService::sendMessage($telegramMsg);
 
             return $this->text("👨‍💻 He desactivado el bot para esta conversación.\nUn asesor te atenderá personalmente.\n\n" . $this->workHours());
         }

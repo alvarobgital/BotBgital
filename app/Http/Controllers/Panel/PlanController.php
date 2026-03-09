@@ -21,7 +21,7 @@ class PlanController extends Controller
             });
         }
 
-        if ($request->has('category')) {
+        if ($request->filled('category')) {
             $query->where('category', $request->category);
         }
 

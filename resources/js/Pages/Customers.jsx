@@ -80,6 +80,7 @@ function CustomerModal({ customer, onClose, onSave }) {
     const [form, setForm] = useState({
         name: customer?.name || '',
         phone: customer?.phone || '',
+        address: customer?.address || '',
         account_number: '',
         plan_name: '',
         label: '',
@@ -92,7 +93,7 @@ function CustomerModal({ customer, onClose, onSave }) {
         setSaving(true); setError('');
         try {
             if (isEdit) {
-                await api.put(`/customers/${customer.id}`, { name: form.name, phone: form.phone });
+                await api.put(`/customers/${customer.id}`, { name: form.name, phone: form.phone, address: form.address });
             } else {
                 await api.post('/customers', form);
             }
@@ -125,6 +126,10 @@ function CustomerModal({ customer, onClose, onSave }) {
                                 <label className="form-label">WhatsApp / Teléfono</label>
                                 <input className="form-input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required placeholder="521722..." />
                             </div>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Dirección / Ubicación (General)</label>
+                            <input className="form-input" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Ej: Calle Principal #123, Colonia Centro, CP 50000" />
                         </div>
                         {!isEdit && (
                             <>
