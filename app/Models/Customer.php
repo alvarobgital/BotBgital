@@ -13,6 +13,7 @@ class Customer extends Model
         'name',
         'phone',
         'address',
+        'zip_code',
     ];
 
     public function services()

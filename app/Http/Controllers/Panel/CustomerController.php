@@ -38,11 +38,14 @@ class CustomerController extends Controller
             'plan_name' => 'nullable|string|max:255',
             'label' => 'nullable|string|max:255',
             'address' => 'nullable|string|max:500',
+            'zip_code' => 'nullable|string|max:10',
         ]);
 
         $customer = Customer::create([
             'name' => $validated['name'],
             'phone' => $validated['phone'],
+            'address' => $validated['address'] ?? null,
+            'zip_code' => $validated['zip_code'] ?? null,
         ]);
 
         $customer->services()->create([
@@ -60,6 +63,8 @@ class CustomerController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
             'phone' => 'sometimes|string|max:20',
+            'address' => 'sometimes|nullable|string|max:500',
+            'zip_code' => 'sometimes|nullable|string|max:10',
         ]);
 
         $customer->update($validated);

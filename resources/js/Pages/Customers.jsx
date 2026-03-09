@@ -75,16 +75,18 @@ function ServiceModal({ customer, service, onClose, onSave }) {
     );
 }
 
-function CustomerModal({ customer, onClose, onSave }) {
+function CustomerModal({ customer, coverageAreas = [], onClose, onSave }) {
     const isEdit = !!customer;
     const [form, setForm] = useState({
         name: customer?.name || '',
         phone: customer?.phone || '',
         address: customer?.address || '',
+        zip_code: customer?.zip_code || '',
         account_number: '',
         plan_name: '',
         label: '',
     });
+    const uniqueZips = [...new Set(coverageAreas.map(c => c.zip_code))].filter(Boolean);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
@@ -93,7 +95,7 @@ function CustomerModal({ customer, onClose, onSave }) {
         setSaving(true); setError('');
         try {
             if (isEdit) {
-                await api.put(`/customers/${customer.id}`, { name: form.name, phone: form.phone, address: form.address });
+                await api.put(`/customers/${customer.id}`, { name: form.name, phone: form.phone, address: form.address, zip_code: form.zip_code });
             } else {
                 await api.post('/customers', form);
             }
@@ -127,9 +129,20 @@ function CustomerModal({ customer, onClose, onSave }) {
                                 <input className="form-input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required placeholder="521722..." />
                             </div>
                         </div>
-                        <div className="form-group">
-                            <label className="form-label">Dirección / Ubicación (General)</label>
-                            <input className="form-input" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Ej: Calle Principal #123, Colonia Centro, CP 50000" />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                            <div className="form-group">
+                                <label className="form-label">Dirección (Calle, No, Colonia)</label>
+                                <input className="form-input" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Ej: Calle Principal #123" />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Código Postal (Cobertura)</label>
+                                <select className="form-input" value={form.zip_code} onChange={e => setForm({ ...form, zip_code: e.target.value })} required={!isEdit}>
+                                    <option value="">-- Seleccionar CP --</option>
+                                    {uniqueZips.map(zip => (
+                                        <option key={zip} value={zip}>{zip}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
                         {!isEdit && (
                             <>
@@ -167,6 +180,7 @@ function CustomerModal({ customer, onClose, onSave }) {
 
 export default function Customers() {
     const [customers, setCustomers] = useState([]);
+    const [coverageAreas, setCoverageAreas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [expanded, setExpanded] = useState({});
@@ -183,8 +197,12 @@ export default function Customers() {
     async function loadCustomers() {
         setLoading(true);
         try {
-            const res = await api.get('/customers', { params: { search } });
-            setCustomers(res.data.data);
+            const [custRes, covRes] = await Promise.all([
+                api.get('/customers', { params: { search } }),
+                api.get('/coverage?limit=500')
+            ]);
+            setCustomers(custRes.data.data || custRes.data);
+            setCoverageAreas(covRes.data.data || covRes.data || []);
         } catch { } finally { setLoading(false); }
     }
 
@@ -326,7 +344,7 @@ export default function Customers() {
             </div>
 
             {showCustomerModal && (
-                <CustomerModal customer={editingCustomer} onClose={() => setShowCustomerModal(false)} onSave={() => { setShowCustomerModal(false); loadCustomers(); }} />
+                <CustomerModal customer={editingCustomer} coverageAreas={coverageAreas} onClose={() => setShowCustomerModal(false)} onSave={() => { setShowCustomerModal(false); loadCustomers(); }} />
             )}
 
             {showServiceModal && (
