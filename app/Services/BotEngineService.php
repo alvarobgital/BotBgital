@@ -99,10 +99,21 @@ class BotEngineService
         $options = $step->options ?? [];
         $selectedOption = null;
 
+        // Check exact matches first
         foreach ($options as $opt) {
-            if ($normalizedText === mb_strtolower(trim($opt['id'])) || $this->fuzzyMatch($normalizedText, mb_strtolower(trim($opt['title'])))) {
+            if ($normalizedText === mb_strtolower(trim($opt['id'])) || $normalizedText === mb_strtolower(trim($opt['title']))) {
                 $selectedOption = $opt;
                 break;
+            }
+        }
+
+        // Check fuzzy matches if no exact match
+        if (!$selectedOption) {
+            foreach ($options as $opt) {
+                if ($this->fuzzyMatch($normalizedText, mb_strtolower(trim($opt['title'])))) {
+                    $selectedOption = $opt;
+                    break;
+                }
             }
         }
 
