@@ -337,16 +337,17 @@ class BotEngineService
 
             if ($results->count() > 0) {
                 $data['zip_code'] = $zip;
-                $data['coverage_zones'] = "\n👉 " . $results->pluck('neighborhood')->unique()->sort()->implode("\n👉 ");
+                $neighborhoods = $results->pluck('neighborhood')->unique()->sort()->values();
+                $data['coverage_zones'] = "\n👉 " . $neighborhoods->implode("\n👉 ");
                 $conversation->bot_state_data = $data;
                 $conversation->save();
-                return ['_next_step' => 'confirm_neighborhood'];
+                return ['_next_step' => 'check_coverage'];
             }
             else {
                 $data['zip_code'] = $zip;
                 $conversation->bot_state_data = $data;
                 $conversation->save();
-                return ['_next_step' => 'select_service_type'];
+                return ['_next_step' => 'no_coverage'];
             }
         }
 
@@ -441,7 +442,7 @@ class BotEngineService
             $data['selected_plan'] = $config['plan_name'] ?? '';
             $conversation->bot_state_data = $data;
             $conversation->save();
-            return ['_next_step' => 'ask_cp']; // advance flow to ask coverage
+            return ['_next_step' => 'confirm_plan'];
         }
 
         return [];

@@ -1,35 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api';
-import { Ticket, Search, CheckCircle, Clock, AlertTriangle, Plus, Share2, X } from 'lucide-react';
+import { Ticket, Search, CheckCircle, Clock, AlertTriangle, Plus, Share2, X, Edit2, Trash2, Eye, EyeOff } from 'lucide-react';
 
-function TicketModal({ onClose, onSave, customers }) {
+function TicketModal({ ticket, onClose, onSave, customers }) {
+    const isEdit = !!ticket;
     const [form, setForm] = useState({
-        customer_service_id: '',
-        subject: '',
-        description: '',
-        priority: 'medium',
-        status: 'open',
-        scheduled_at: '',
+        customer_service_id: ticket?.customer_service_id || '',
+        subject: ticket?.subject || '',
+        description: ticket?.description || '',
+        priority: ticket?.priority || 'medium',
+        status: ticket?.status || 'open',
+        scheduled_at: ticket?.scheduled_at ? ticket.scheduled_at.slice(0, 16) : '',
     });
+    const [accountSearch, setAccountSearch] = useState('');
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+
+    const filteredCustomers = accountSearch.length > 0
+        ? customers.filter(c =>
+            c.name?.toLowerCase().includes(accountSearch.toLowerCase()) ||
+            c.phone?.includes(accountSearch) ||
+            c.services?.some(s => s.account_number?.toLowerCase().includes(accountSearch.toLowerCase()))
+        )
+        : customers;
 
     async function handleSubmit(e) {
         e.preventDefault();
         setSaving(true); setError('');
         try {
-            await api.post('/tickets', form);
+            if (isEdit) {
+                await api.put(`/tickets/${ticket.id}`, form);
+            } else {
+                await api.post('/tickets', form);
+            }
             onSave();
         } catch (err) {
-            setError(err.response?.data?.message || 'Error al crear ticket');
+            setError(err.response?.data?.message || 'Error al guardar ticket');
         } finally { setSaving(false); }
     }
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 650 }}>
                 <div className="modal-header">
-                    <h2>Nuevo Ticket</h2>
+                    <h2>{isEdit ? `Editar Ticket #${ticket.id}` : 'Nuevo Ticket'}</h2>
                     <button className="btn-icon" onClick={onClose}><X size={18} /></button>
                 </div>
                 <form onSubmit={handleSubmit}>
@@ -37,10 +51,11 @@ function TicketModal({ onClose, onSave, customers }) {
                         {error && <div style={{ background: '#FEF2F2', color: '#DC2626', padding: '10px', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
 
                         <div className="form-group">
-                            <label className="form-label">Cliente y Servicio (Buscar por Cuenta / Nombre)</label>
+                            <label className="form-label">Buscar Cliente (Nombre, Teléfono o Cuenta)</label>
+                            <input className="form-input" placeholder="Escribir para buscar..." value={accountSearch} onChange={e => setAccountSearch(e.target.value)} style={{ marginBottom: 8 }} />
                             <select className="form-input" value={form.customer_service_id} onChange={e => setForm({ ...form, customer_service_id: e.target.value })} required>
                                 <option value="">-- Seleccionar cuenta/servicio --</option>
-                                {customers.map(c => (
+                                {filteredCustomers.map(c => (
                                     <optgroup key={c.id} label={`${c.name} - ${c.phone}`}>
                                         {c.services?.map(s => (
                                             <option key={s.id} value={s.id}>
@@ -62,7 +77,7 @@ function TicketModal({ onClose, onSave, customers }) {
                             <textarea className="form-input" rows="4" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} required placeholder="Especifique dirección, contexto y pruebas realizadas..." />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
                             <div className="form-group">
                                 <label className="form-label">Prioridad</label>
                                 <select className="form-input" value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
@@ -72,8 +87,19 @@ function TicketModal({ onClose, onSave, customers }) {
                                     <option value="urgent">Urgente 🚨</option>
                                 </select>
                             </div>
+                            {isEdit && (
+                                <div className="form-group">
+                                    <label className="form-label">Estado</label>
+                                    <select className="form-input" value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}>
+                                        <option value="open">Abierto</option>
+                                        <option value="in_progress">En Progreso</option>
+                                        <option value="resolved">Resuelto</option>
+                                        <option value="closed">Cerrado</option>
+                                    </select>
+                                </div>
+                            )}
                             <div className="form-group">
-                                <label className="form-label">Fecha / Hora Programada (Opcional)</label>
+                                <label className="form-label">Programar Fecha/Hora</label>
                                 <input className="form-input" type="datetime-local" value={form.scheduled_at} onChange={e => setForm({ ...form, scheduled_at: e.target.value })} />
                             </div>
                         </div>
@@ -81,7 +107,7 @@ function TicketModal({ onClose, onSave, customers }) {
                     <div className="modal-footer">
                         <button type="button" className="btn btn-ghost" onClick={onClose}>Cancelar</button>
                         <button type="submit" className="btn btn-primary" disabled={saving}>
-                            {saving ? 'Guardando...' : 'Crear Ticket'}
+                            {saving ? 'Guardando...' : (isEdit ? 'Actualizar Ticket' : 'Crear Ticket')}
                         </button>
                     </div>
                 </form>
@@ -97,6 +123,8 @@ export default function Tickets() {
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState('all');
     const [showModal, setShowModal] = useState(false);
+    const [editingTicket, setEditingTicket] = useState(null);
+    const [expandedId, setExpandedId] = useState(null);
 
     useEffect(() => { loadData(); }, []);
 
@@ -104,7 +132,7 @@ export default function Tickets() {
         try {
             const [tRes, cRes] = await Promise.all([
                 api.get('/tickets'),
-                api.get('/customers?limit=500') // fetch recently active customers with their services
+                api.get('/customers?limit=500')
             ]);
             setTickets(tRes.data);
             setCustomers(cRes.data.data || cRes.data || []);
@@ -115,6 +143,14 @@ export default function Tickets() {
         try {
             const res = await api.put(`/tickets/${id}`, { status: newStatus });
             setTickets(tickets.map(t => t.id === id ? { ...t, ...res.data } : t));
+        } catch { }
+    }
+
+    async function deleteTicket(id) {
+        if (!confirm('¿Estás seguro de eliminar este ticket? Esta acción es irreversible.')) return;
+        try {
+            await api.delete(`/tickets/${id}`);
+            setTickets(tickets.filter(t => t.id !== id));
         } catch { }
     }
 
@@ -152,7 +188,7 @@ export default function Tickets() {
                     <h1>Tickets de Soporte</h1>
                     <p>Reportes técnicos generados por los usuarios del bot o asesores</p>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                <button className="btn btn-primary" onClick={() => { setEditingTicket(null); setShowModal(true); }}>
                     <Plus size={16} /> Crear Ticket
                 </button>
             </div>
@@ -192,6 +228,7 @@ export default function Tickets() {
                         {filteredTickets.map(ticket => {
                             const st = statusMap[ticket.status] || statusMap.closed;
                             const StatusIcon = st.icon;
+                            const isExpanded = expandedId === ticket.id;
                             return (
                                 <div key={ticket.id} className="card" style={{ padding: 20, borderLeft: `3px solid ${st.color}` }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
@@ -213,17 +250,21 @@ export default function Tickets() {
                                                 <strong>Fecha de creación:</strong> {new Date(ticket.created_at).toLocaleString('es-MX')}
                                             </p>
                                             {ticket.scheduled_at && (
-                                                <p style={{ color: 'var(--color-primary)', fontSize: '0.85rem', marginBottom: 12, fontWeight: 500 }}>
+                                                <p style={{ color: 'var(--color-primary)', fontSize: '0.85rem', marginBottom: 4, fontWeight: 500 }}>
                                                     <strong>Agendado para:</strong> {new Date(ticket.scheduled_at).toLocaleString('es-MX')}
                                                 </p>
                                             )}
-                                            {!ticket.scheduled_at && <div style={{ marginBottom: 12 }}></div>}
-                                            <div style={{ background: 'var(--bg-app)', padding: 14, borderRadius: 8, fontSize: '0.85rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                                                {ticket.description}
-                                            </div>
+                                            {isExpanded && (
+                                                <div style={{ background: 'var(--bg-app)', padding: 14, borderRadius: 8, fontSize: '0.85rem', whiteSpace: 'pre-wrap', lineHeight: 1.5, marginTop: 12 }}>
+                                                    {ticket.description}
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 140 }}>
+                                            <button className="btn btn-ghost btn-sm btn-block" onClick={() => setExpandedId(isExpanded ? null : ticket.id)}>
+                                                {isExpanded ? <><EyeOff size={14} style={{ marginRight: 4 }} /> Ocultar</> : <><Eye size={14} style={{ marginRight: 4 }} /> Ver Detalle</>}
+                                            </button>
                                             {ticket.status === 'open' && (
                                                 <button className="btn btn-secondary btn-sm btn-block" onClick={() => updateStatus(ticket.id, 'in_progress')}>
                                                     En Progreso
@@ -234,13 +275,14 @@ export default function Tickets() {
                                                     Resuelto
                                                 </button>
                                             )}
-                                            {ticket.status !== 'closed' && (
-                                                <button className="btn btn-ghost btn-sm btn-block" style={{ color: 'var(--color-danger)' }} onClick={() => updateStatus(ticket.id, 'closed')}>
-                                                    Cerrar
-                                                </button>
-                                            )}
                                             <button className="btn btn-ghost btn-sm btn-block" style={{ color: 'var(--color-primary)' }} onClick={() => shareTicket(ticket)}>
-                                                <Share2 size={14} style={{ marginRight: 6 }} /> Compartir (WA)
+                                                <Share2 size={14} style={{ marginRight: 4 }} /> Compartir
+                                            </button>
+                                            <button className="btn btn-ghost btn-sm btn-block" onClick={() => { setEditingTicket(ticket); setShowModal(true); }}>
+                                                <Edit2 size={14} style={{ marginRight: 4 }} /> Editar
+                                            </button>
+                                            <button className="btn btn-ghost btn-sm btn-block" style={{ color: 'var(--color-danger)' }} onClick={() => deleteTicket(ticket.id)}>
+                                                <Trash2 size={14} style={{ marginRight: 4 }} /> Eliminar
                                             </button>
                                         </div>
                                     </div>
@@ -252,7 +294,7 @@ export default function Tickets() {
             </div>
 
             {showModal && (
-                <TicketModal onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); loadData(); }} customers={customers} />
+                <TicketModal ticket={editingTicket} onClose={() => { setShowModal(false); setEditingTicket(null); }} onSave={() => { setShowModal(false); setEditingTicket(null); loadData(); }} customers={customers} />
             )}
         </div>
     );

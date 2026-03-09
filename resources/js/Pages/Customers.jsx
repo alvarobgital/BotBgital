@@ -77,10 +77,10 @@ function ServiceModal({ customer, service, coverageAreas = [], plans = [], onClo
                         <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 16 }}>
                             <div className="form-group">
                                 <label className="form-label">Código Postal</label>
-                                <select className="form-input" value={form.zip_code} onChange={e => setForm({ ...form, zip_code: e.target.value, neighborhood: '' })}>
-                                    <option value="">-- CP --</option>
-                                    {uniqueZips.map(zip => <option key={zip} value={zip}>{zip}</option>)}
-                                </select>
+                                <input className="form-input" list="zip-list-svc" placeholder="Escribir CP..." value={form.zip_code} onChange={e => setForm({ ...form, zip_code: e.target.value, neighborhood: '' })} />
+                                <datalist id="zip-list-svc">
+                                    {uniqueZips.map(zip => <option key={zip} value={zip} />)}
+                                </datalist>
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Colonia (Rellena la dirección automáticamente)</label>
@@ -182,12 +182,10 @@ function CustomerModal({ customer, coverageAreas = [], plans = [], onClose, onSa
                         <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 16 }}>
                             <div className="form-group">
                                 <label className="form-label">Código Postal</label>
-                                <select className="form-input" value={form.zip_code} onChange={e => setForm({ ...form, zip_code: e.target.value, neighborhood: '' })} required={!isEdit}>
-                                    <option value="">-- CP --</option>
-                                    {uniqueZips.map(zip => (
-                                        <option key={zip} value={zip}>{zip}</option>
-                                    ))}
-                                </select>
+                                <input className="form-input" list="zip-list-cust" placeholder="Escribir CP..." value={form.zip_code} onChange={e => setForm({ ...form, zip_code: e.target.value, neighborhood: '' })} required={!isEdit} />
+                                <datalist id="zip-list-cust">
+                                    {uniqueZips.map(zip => <option key={zip} value={zip} />)}
+                                </datalist>
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Colonia (Rellena la dirección automáticamente)</label>
