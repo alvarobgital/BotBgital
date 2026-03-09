@@ -49,6 +49,7 @@ class TicketController extends Controller
             'status' => 'sometimes|in:open,in_progress,resolved,closed',
             'priority' => 'sometimes|in:low,medium,high,urgent',
             'resolution_notes' => 'nullable|string',
+            'scheduled_at' => 'nullable|date',
         ]);
 
         $ticket->update($validated);

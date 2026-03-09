@@ -341,13 +341,13 @@ class BotEngineService
                 $data['coverage_zones'] = "\n👉 " . $neighborhoods->implode("\n👉 ");
                 $conversation->bot_state_data = $data;
                 $conversation->save();
-                return ['_next_step' => 'check_coverage'];
+                return ['_next_step' => 'confirm_neighborhood']; // Changed from check_coverage to match flow
             }
             else {
                 $data['zip_code'] = $zip;
                 $conversation->bot_state_data = $data;
                 $conversation->save();
-                return ['_next_step' => 'no_coverage'];
+                return ['_next_step' => 'no_coverage']; // Matches the 'no_coverage' step in DB
             }
         }
 

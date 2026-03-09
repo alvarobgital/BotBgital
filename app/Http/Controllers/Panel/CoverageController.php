@@ -21,7 +21,8 @@ class CoverageController extends Controller
             });
         }
 
-        return response()->json($query->orderBy('zip_code')->paginate(20));
+        $limit = $request->input('limit', 20);
+        return response()->json($query->orderBy('zip_code')->paginate($limit));
     }
 
     public function import(Request $request)
