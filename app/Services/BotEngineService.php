@@ -117,6 +117,33 @@ class BotEngineService
             }
         }
 
+        // Intercept Dynamic Plans & Categories
+        if (!$selectedOption && $step->action_type === 'show_plan_categories') {
+            $categories = \App\Models\Plan::where('is_active', true)->whereNotNull('category')->distinct()->pluck('category');
+            foreach ($categories as $cat) {
+                if ($normalizedText === 'cat_' . \Illuminate\Support\Str::slug($cat) || $this->fuzzyMatch($normalizedText, mb_strtolower($cat))) {
+                    $selectedOption = [
+                        'action' => 'show_plans',
+                        'action_config' => ['category' => $cat]
+                    ];
+                    break;
+                }
+            }
+        }
+
+        if (!$selectedOption && $step->action_type === 'show_plans') {
+            $plans = \App\Models\Plan::where('is_active', true)->get();
+            foreach ($plans as $plan) {
+                if ($normalizedText === 'plan_' . $plan->id || $this->fuzzyMatch($normalizedText, mb_strtolower('Me interesa ' . $plan->name)) || $this->fuzzyMatch($normalizedText, mb_strtolower($plan->name))) {
+                    $selectedOption = [
+                        'action' => 'select_plan',
+                        'action_config' => ['plan_id' => $plan->id, 'plan_name' => $plan->name]
+                    ];
+                    break;
+                }
+            }
+        }
+
         if ($selectedOption) {
             if (!empty($selectedOption['action'])) {
                 $actionResult = $this->executeAction($conversation, $selectedOption['action'], $data, $selectedOption['action_config'] ?? []);

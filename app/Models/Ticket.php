@@ -25,4 +25,9 @@ class Ticket extends Model
     {
         return $this->belongsTo(Contact::class);
     }
+
+    public function customerService()
+    {
+        return $this->belongsTo(CustomerService::class);
+    }
 }

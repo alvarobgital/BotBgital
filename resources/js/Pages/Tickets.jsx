@@ -168,15 +168,34 @@ export default function Tickets() {
     };
 
     function shareTicket(ticket) {
-        const scheduledTxt = ticket.scheduled_at ? `\n📅 *Agendado para:* ${new Date(ticket.scheduled_at).toLocaleString('es-MX')}` : '';
+        const priorityTranslate = {
+            low: 'Baja', medium: 'Media', high: 'Alta', urgent: 'Urgente'
+        };
+        const pTxt = priorityTranslate[ticket.priority] || ticket.priority;
+
+        let accDetails = '';
+        if (ticket.customer_service) {
+            const svc = ticket.customer_service;
+            const cst = svc.customer || {};
+            accDetails =
+                `👤 *Cliente:* ${cst.name || ticket.contact?.name || 'Desconocido'}\n` +
+                `🔢 *Cuenta:* ${svc.account_number || 'N/A'}\n` +
+                `📦 *Plan:* ${svc.plan_name || 'N/A'}\n` +
+                `🏘️ *Colonia:* ${cst.neighborhood || 'N/A'}\n` +
+                `📍 *Dirección:* ${svc.address || cst.address || 'N/A'}\n`;
+        } else {
+            accDetails = `👤 *Cliente:* ${ticket.contact?.name || ticket.contact?.phone || 'Desconocido'}\n`;
+        }
+
+        const scheduledTxt = ticket.scheduled_at ? `📅 *Agendado para:* ${new Date(ticket.scheduled_at).toLocaleString('es-MX')}\n` : '';
         const url = `https://wa.me/?text=${encodeURIComponent(
             `🛠️ *TICKET SOPORTE #${ticket.id}*\n` +
             `⚠️ *Asunto:* ${ticket.subject}\n` +
-            `🚨 *Prioridad:* ${ticket.priority?.toUpperCase()}\n` +
-            `👤 *Cliente:* ${ticket.contact?.name || ticket.contact?.phone}\n` +
+            `🚨 *Prioridad:* ${pTxt.toUpperCase()}\n` +
+            accDetails +
             `📱 *WhatsApp:* ${ticket.contact?.phone || 'Desconocido'}\n` +
-            `📍 *Dirección/Contexto:* \n${ticket.description}` +
-            scheduledTxt
+            scheduledTxt +
+            `\n📝 *Contexto/Falla:* \n${ticket.description}`
         )}`;
         window.open(url, '_blank');
     }

@@ -10,7 +10,7 @@ class TicketController extends Controller
 {
     public function index()
     {
-        $tickets = Ticket::with('contact')->latest()->get();
+        $tickets = Ticket::with('contact', 'customerService.customer')->latest()->get();
         return response()->json($tickets);
     }
 
