@@ -23,14 +23,21 @@ class TicketController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'contact_id' => 'required|exists:contacts,id',
-            'customer_service_id' => 'nullable|exists:customer_services,id',
+            'customer_service_id' => 'required|exists:customer_services,id',
             'subject' => 'required|string|max:255',
             'description' => 'required|string',
             'status' => 'required|in:open,in_progress,resolved,closed',
             'priority' => 'required|in:low,medium,high,urgent',
-            'category' => 'nullable|string|max:100',
+            'scheduled_at' => 'nullable|date',
         ]);
+
+        $service = \App\Models\CustomerService::with('customer')->find($validated['customer_service_id']);
+        $contact = \App\Models\Contact::firstOrCreate(
+        ['phone' => $service->customer->phone],
+        ['name' => $service->customer->name]
+        );
+
+        $validated['contact_id'] = $contact->id;
 
         $ticket = Ticket::create($validated);
         return response()->json($ticket->load('contact'), 201);

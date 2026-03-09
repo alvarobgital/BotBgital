@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { Ticket, Search, CheckCircle, Clock, AlertTriangle, Plus, Share2, X } from 'lucide-react';
 
-function TicketModal({ onClose, onSave, contacts }) {
+function TicketModal({ onClose, onSave, customers }) {
     const [form, setForm] = useState({
-        contact_id: '',
+        customer_service_id: '',
         subject: '',
         description: '',
         priority: 'medium',
         status: 'open',
+        scheduled_at: '',
     });
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -36,11 +37,17 @@ function TicketModal({ onClose, onSave, contacts }) {
                         {error && <div style={{ background: '#FEF2F2', color: '#DC2626', padding: '10px', borderRadius: 8, marginBottom: 16 }}>{error}</div>}
 
                         <div className="form-group">
-                            <label className="form-label">Cliente (Contacto de WhatsApp)</label>
-                            <select className="form-input" value={form.contact_id} onChange={e => setForm({ ...form, contact_id: e.target.value })} required>
-                                <option value="">-- Seleccionar cliente --</option>
-                                {contacts.map(c => (
-                                    <option key={c.id} value={c.id}>{c.name || c.phone}</option>
+                            <label className="form-label">Cliente y Servicio (Buscar por Cuenta / Nombre)</label>
+                            <select className="form-input" value={form.customer_service_id} onChange={e => setForm({ ...form, customer_service_id: e.target.value })} required>
+                                <option value="">-- Seleccionar cuenta/servicio --</option>
+                                {customers.map(c => (
+                                    <optgroup key={c.id} label={`${c.name} - ${c.phone}`}>
+                                        {c.services?.map(s => (
+                                            <option key={s.id} value={s.id}>
+                                                {s.account_number} - {s.plan_name || 'Sin Plan'} {s.address ? `(${s.address})` : ''}
+                                            </option>
+                                        ))}
+                                    </optgroup>
                                 ))}
                             </select>
                         </div>
@@ -65,6 +72,10 @@ function TicketModal({ onClose, onSave, contacts }) {
                                     <option value="urgent">Urgente 🚨</option>
                                 </select>
                             </div>
+                            <div className="form-group">
+                                <label className="form-label">Fecha / Hora Programada (Opcional)</label>
+                                <input className="form-input" type="datetime-local" value={form.scheduled_at} onChange={e => setForm({ ...form, scheduled_at: e.target.value })} />
+                            </div>
                         </div>
                     </div>
                     <div className="modal-footer">
@@ -81,7 +92,7 @@ function TicketModal({ onClose, onSave, contacts }) {
 
 export default function Tickets() {
     const [tickets, setTickets] = useState([]);
-    const [contacts, setContacts] = useState([]);
+    const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState('all');
@@ -93,10 +104,10 @@ export default function Tickets() {
         try {
             const [tRes, cRes] = await Promise.all([
                 api.get('/tickets'),
-                api.get('/contacts?limit=100') // Assume we fetch recent contacts to assign
+                api.get('/customers?limit=500') // fetch recently active customers with their services
             ]);
             setTickets(tRes.data);
-            setContacts(cRes.data.data || cRes.data || []);
+            setCustomers(cRes.data.data || cRes.data || []);
         } catch { } finally { setLoading(false); }
     }
 
@@ -121,13 +132,15 @@ export default function Tickets() {
     };
 
     function shareTicket(ticket) {
+        const scheduledTxt = ticket.scheduled_at ? `\n📅 *Agendado para:* ${new Date(ticket.scheduled_at).toLocaleString('es-MX')}` : '';
         const url = `https://wa.me/?text=${encodeURIComponent(
             `🛠️ *TICKET SOPORTE #${ticket.id}*\n` +
             `⚠️ *Asunto:* ${ticket.subject}\n` +
             `🚨 *Prioridad:* ${ticket.priority?.toUpperCase()}\n` +
             `👤 *Cliente:* ${ticket.contact?.name || ticket.contact?.phone}\n` +
             `📱 *WhatsApp:* ${ticket.contact?.phone || 'Desconocido'}\n` +
-            `📍 *Dirección/Contexto:* \n${ticket.description}`
+            `📍 *Dirección/Contexto:* \n${ticket.description}` +
+            scheduledTxt
         )}`;
         window.open(url, '_blank');
     }
@@ -196,9 +209,15 @@ export default function Tickets() {
                                             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: 4 }}>
                                                 <strong>Cliente:</strong> {ticket.contact?.name || ticket.contact?.phone || 'Desconocido'}
                                             </p>
-                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: 12 }}>
-                                                <strong>Fecha:</strong> {new Date(ticket.created_at).toLocaleString('es-MX')}
+                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: 4 }}>
+                                                <strong>Fecha de creación:</strong> {new Date(ticket.created_at).toLocaleString('es-MX')}
                                             </p>
+                                            {ticket.scheduled_at && (
+                                                <p style={{ color: 'var(--color-primary)', fontSize: '0.85rem', marginBottom: 12, fontWeight: 500 }}>
+                                                    <strong>Agendado para:</strong> {new Date(ticket.scheduled_at).toLocaleString('es-MX')}
+                                                </p>
+                                            )}
+                                            {!ticket.scheduled_at && <div style={{ marginBottom: 12 }}></div>}
                                             <div style={{ background: 'var(--bg-app)', padding: 14, borderRadius: 8, fontSize: '0.85rem', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
                                                 {ticket.description}
                                             </div>
@@ -233,7 +252,7 @@ export default function Tickets() {
             </div>
 
             {showModal && (
-                <TicketModal onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); loadData(); }} contacts={contacts} />
+                <TicketModal onClose={() => setShowModal(false)} onSave={() => { setShowModal(false); loadData(); }} customers={customers} />
             )}
         </div>
     );

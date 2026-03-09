@@ -210,14 +210,13 @@ class BotEngineService
             $conversation->save();
 
             $reason = $config['reason'] ?? 'Solicitud desde flujo conversacional';
-            $name = $data['customer_name'] ?? $conversation->contact->name ?? $conversation->contact->phone;
-            $isCustomer = $conversation->contact->is_customer ? '✅ Cliente' : '⏳ Posible Cliente';
-            $account = $data['account_number'] ?? 'N/A';
+            $isCustomer = $conversation->contact->is_customer;
+            $phone = $conversation->contact->phone;
             $interest = $data['selected_plan'] ?? $data['plan_name'] ?? 'No especificado';
             $zip = $data['zip_code'] ?? 'N/A';
 
             // Auto-create lead if not a customer
-            if (!$conversation->contact->is_customer) {
+            if (!$isCustomer) {
                 SalesLead::firstOrCreate(
                 [
                     'contact_id' => $conversation->contact->id,
@@ -228,7 +227,7 @@ class BotEngineService
                     'plan_interest' => $interest,
                     'client_type' => $data['selected_category'] ?? 'Hogar',
                     'zip_code' => $zip,
-                    'phone' => $conversation->contact->phone,
+                    'phone' => $phone,
                 ]
                 );
             }
@@ -242,19 +241,44 @@ class BotEngineService
             if (empty($recentTxt))
                 $recentTxt = "Sin mensajes previos.";
 
-            $telegramMsg = "👨‍💻 *Escalación a Asesor*\n\n";
-            $telegramMsg .= "🏷️ *Tipo:* {$isCustomer}\n";
-            $telegramMsg .= "👤 *Nombre:* {$name}\n";
-            $telegramMsg .= "📱 *WhatsApp:* {$conversation->contact->phone}\n";
-            if ($conversation->contact->is_customer) {
+            $telegramMsg = "";
+            if ($isCustomer) {
+                $name = $data['customer_name'] ?? $conversation->contact->name ?? 'Desconocido';
+                $account = $data['account_number'] ?? 'N/A';
+                $plan = $data['plan_name'] ?? 'N/A';
+
+                $address = $data['customer_address'] ?? 'No registrada';
+                if ($address === 'No registrada' && !empty($account)) {
+                    $service = \App\Models\CustomerService::with('customer')->where('account_number', $account)->first();
+                    if ($service) {
+                        $address = $service->address ?? $service->customer->address ?? 'No registrada';
+                    }
+                }
+
+                $telegramMsg .= "🚨 *ALERTA DE FALLA TÉCNICA — BGITAL Telecomunicaciones*\n";
+                $telegramMsg .= "━━━━━━━━━━━━━━━━━━\n";
+                $telegramMsg .= "👤 *Cliente:* {$name}\n";
                 $telegramMsg .= "🔢 *Cuenta:* {$account}\n";
+                $telegramMsg .= "📦 *Plan:* {$plan}\n";
+                $telegramMsg .= "📍 *Dirección:* {$address}\n";
+                $telegramMsg .= "🔴 *Tipo de falla / Motivo:* {$reason}\n";
+                $telegramMsg .= "🛠️ *Contexto:* \n{$recentTxt}\n";
+                $telegramMsg .= "📅 *Fecha y hora:* " . now()->setTimezone('America/Mexico_City')->format('d/m/Y — h:i a') . "\n";
+                $telegramMsg .= "📞 *Teléfono:* +{$phone}\n";
             }
             else {
+                $name = $data['customer_name'] ?? $conversation->contact->name ?? $phone;
+
+                $telegramMsg .= "🚀 *NUEVO PROSPECTO — BGITAL Telecomunicaciones*\n";
+                $telegramMsg .= "━━━━━━━━━━━━━━━━━━\n";
+                $telegramMsg .= "👤 *Nombre:* {$name}\n";
+                $telegramMsg .= "📱 *Teléfono:* +{$phone}\n";
                 $telegramMsg .= "📍 *CP:* {$zip}\n";
                 $telegramMsg .= "📦 *Interés:* {$interest}\n";
+                $telegramMsg .= "🔴 *Motivo:* {$reason}\n";
+                $telegramMsg .= "💬 *Contexto Reciente:*\n{$recentTxt}\n";
+                $telegramMsg .= "📅 *Fecha y hora:* " . now()->setTimezone('America/Mexico_City')->format('d/m/Y — h:i a') . "\n";
             }
-            $telegramMsg .= "📝 *Motivo:* {$reason}\n\n";
-            $telegramMsg .= "💬 *Contexto Reciente:*\n{$recentTxt}";
 
             TelegramService::sendMessage($telegramMsg);
 
@@ -277,6 +301,7 @@ class BotEngineService
                 $data['customer_name'] = $service->customer->name;
                 $data['account_number'] = $service->account_number;
                 $data['plan_name'] = $service->plan_name;
+                $data['customer_address'] = $service->address ?? $service->customer->address ?? '';
                 $conversation->bot_state_data = $data;
                 $conversation->save();
                 return []; // Proceed to next step
@@ -336,11 +361,72 @@ class BotEngineService
         }
 
         if ($actionType === 'show_plan_categories') {
-            return [];
+            $categories = \App\Models\Plan::where('is_active', true)->whereNotNull('category')->where('category', '!=', '')->distinct()->pluck('category');
+            if ($categories->isEmpty())
+                return [];
+
+            $options = [];
+            foreach ($categories as $cat) {
+                $options[] = [
+                    'id' => 'cat_' . Str::slug($cat),
+                    'title' => $cat,
+                    'action' => 'show_plans',
+                    'action_config' => ['category' => $cat]
+                ];
+            }
+
+            $msg = "¿Qué tipo de plan estás buscando?";
+            return count($options) <= 3 ? $this->buttons($msg, $options) : $this->listMenu($msg, $options);
         }
 
         if ($actionType === 'show_plans') {
-            return [];
+            $category = $config['category'] ?? $data['selected_category'] ?? null;
+            $data['selected_category'] = $category;
+            $conversation->bot_state_data = $data;
+            $conversation->save();
+
+            $query = \App\Models\Plan::where('is_active', true);
+            if ($category) {
+                $query->where('category', $category);
+            }
+            $plans = $query->get();
+
+            if ($plans->isEmpty()) {
+                return $this->text("Actualmente no tenemos planes disponibles en esta categoría. Escribe *reiniciar* para volver al inicio.");
+            }
+
+            $msg = "Estos son los planes disponibles:\n\n";
+            $options = [];
+            foreach ($plans as $plan) {
+                $msg .= "✅ *{$plan->name}* — {$plan->speed}\n";
+                if ($plan->description) {
+                    $msg .= "_{$plan->description}_\n";
+                }
+                $msg .= "💰 $" . number_format($plan->price, 2) . "/mes\n\n";
+
+                $options[] = [
+                    'id' => 'plan_' . $plan->id,
+                    'title' => 'Me interesa ' . $plan->name,
+                    'action' => 'select_plan',
+                    'action_config' => ['plan_id' => $plan->id, 'plan_name' => $plan->name]
+                ];
+            }
+
+            $msg .= "¿Cuál de estos planes te interesa más?";
+
+            if (count($options) <= 3) {
+                return $this->buttons($msg, $options);
+            }
+            else {
+                return $this->listMenu($msg, $options);
+            }
+        }
+
+        if ($actionType === 'select_plan') {
+            $data['selected_plan'] = $config['plan_name'] ?? '';
+            $conversation->bot_state_data = $data;
+            $conversation->save();
+            return ['_next_step' => 'ask_cp']; // advance flow to ask coverage
         }
 
         return [];

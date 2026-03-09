@@ -28,8 +28,10 @@ Route::group(['prefix' => 'api', 'middleware' => ['web']], function () {
 
             // Tickets
             Route::get('/tickets', [TicketController::class , 'index']);
+            Route::post('/tickets', [TicketController::class , 'store']);
             Route::get('/tickets/{ticket}', [TicketController::class , 'show']);
             Route::put('/tickets/{ticket}', [TicketController::class , 'update']);
+            Route::delete('/tickets/{ticket}', [TicketController::class , 'destroy']);
 
             // Users Management
             Route::get('/users', [UserController::class , 'index']);
