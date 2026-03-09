@@ -267,7 +267,7 @@ export default function Customers() {
         try {
             const [custRes, covRes, planRes] = await Promise.all([
                 api.get('/customers', { params: { search } }),
-                api.get('/coverage?limit=500'),
+                api.get('/coverage?limit=500&active=1'),
                 api.get('/plans')
             ]);
             setCustomers(custRes.data.data || custRes.data);

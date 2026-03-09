@@ -21,6 +21,10 @@ class CoverageController extends Controller
             });
         }
 
+        if ($request->filled('active') && $request->active == 1) {
+            $query->where('is_active', true);
+        }
+
         $limit = $request->input('limit', 20);
         return response()->json($query->orderBy('zip_code')->paginate($limit));
     }

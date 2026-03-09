@@ -174,8 +174,8 @@ class BotEngineService
             $conversation->save();
         }
 
-        // 3. Execute action if defined FIRST
-        if ($step->action_type) {
+        // 3. Execute action if defined FIRST and step is action_only
+        if ($step->action_type && $step->response_type === 'action_only') {
             $actionResult = $this->executeAction($conversation, $step->action_type, $data, $step->action_config);
             if (isset($actionResult['_next_step'])) {
                 $next = BotFlowStep::where('step_key', $actionResult['_next_step'])->first();
