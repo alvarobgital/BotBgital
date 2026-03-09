@@ -51,6 +51,10 @@ class BotEngineService
         // 4. Match Flow by Keywords
         $flow = $this->matchFlow($normalizedText);
         if ($flow) {
+            if ($flow->flow_type === 'keyword') {
+                return $this->text($flow->response_text ?? '');
+            }
+
             $entryStep = $flow->steps()->where('is_entry_point', true)->first();
             if ($entryStep) {
                 return $this->executeStep($conversation, $entryStep);
@@ -104,7 +108,16 @@ class BotEngineService
 
         if ($selectedOption) {
             if (!empty($selectedOption['action'])) {
-                return $this->executeAction($conversation, $selectedOption['action'], $data);
+                $actionResult = $this->executeAction($conversation, $selectedOption['action'], $data, $selectedOption['action_config'] ?? []);
+
+                if (isset($actionResult['_next_step'])) {
+                    $nextStep = BotFlowStep::where('step_key', $actionResult['_next_step'])->first();
+                    if ($nextStep)
+                        return $this->executeStep($conversation, $nextStep);
+                }
+                if (isset($actionResult['type'])) {
+                    return $actionResult;
+                }
             }
             if (!empty($selectedOption['next_step'])) {
                 $nextStep = BotFlowStep::where('step_key', $selectedOption['next_step'])->first();
@@ -161,22 +174,20 @@ class BotEngineService
             $conversation->save();
         }
 
-        // 3. Format response based on type
-        if ($step->response_type === 'text' || $step->response_type === 'action_only') {
-            if ($step->action_type) {
-                $actionResult = $this->executeAction($conversation, $step->action_type, $data, $step->action_config);
-                if (isset($actionResult['_next_step'])) {
-                    $next = BotFlowStep::where('step_key', $actionResult['_next_step'])->first();
-                    if ($next)
-                        return $this->executeStep($conversation, $next);
-                }
-                if (isset($actionResult['type']) && $step->response_type === 'action_only') {
-                    return $actionResult;
-                }
+        // 3. Execute action if defined FIRST
+        if ($step->action_type) {
+            $actionResult = $this->executeAction($conversation, $step->action_type, $data, $step->action_config);
+            if (isset($actionResult['_next_step'])) {
+                $next = BotFlowStep::where('step_key', $actionResult['_next_step'])->first();
+                if ($next)
+                    return $this->executeStep($conversation, $next);
             }
-            return $this->attachMedia($this->text($message), $step);
+            if (isset($actionResult['type'])) {
+                return $this->attachMedia($actionResult, $step);
+            }
         }
 
+        // 4. Format string response based on type
         if ($step->response_type === 'buttons') {
             return $this->attachMedia($this->buttons($message, $step->options ?? []), $step);
         }
@@ -362,8 +373,9 @@ class BotEngineService
 
         if ($actionType === 'show_plan_categories') {
             $categories = \App\Models\Plan::where('is_active', true)->whereNotNull('category')->where('category', '!=', '')->distinct()->pluck('category');
-            if ($categories->isEmpty())
-                return [];
+            if ($categories->isEmpty()) {
+                return $this->text("Actualmente no hay planes configurados. Escribe *reiniciar* para volver al inicio.");
+            }
 
             $options = [];
             foreach ($categories as $cat) {
@@ -381,6 +393,9 @@ class BotEngineService
 
         if ($actionType === 'show_plans') {
             $category = $config['category'] ?? $data['selected_category'] ?? null;
+            if ($category === 'Todas')
+                $category = null;
+
             $data['selected_category'] = $category;
             $conversation->bot_state_data = $data;
             $conversation->save();

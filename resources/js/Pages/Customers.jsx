@@ -2,14 +2,21 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { Users, Plus, Search, Trash2, Edit2, X, User, ChevronDown, ChevronUp, Package } from 'lucide-react';
 
-function ServiceModal({ customer, service, onClose, onSave }) {
+function ServiceModal({ customer, service, coverageAreas = [], plans = [], onClose, onSave }) {
     const isEdit = !!service;
     const [form, setForm] = useState({
         account_number: service?.account_number || '',
         plan_name: service?.plan_name || '',
         label: service?.label || '',
         address: service?.address || '',
+        zip_code: '',
+        neighborhood: '',
     });
+    const uniqueZips = [...new Set(coverageAreas.map(c => c.zip_code))].filter(Boolean);
+    const availableNeighborhoods = form.zip_code
+        ? coverageAreas.filter(c => c.zip_code === form.zip_code).map(c => c.neighborhood)
+        : [];
+
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
@@ -18,9 +25,19 @@ function ServiceModal({ customer, service, onClose, onSave }) {
         setSaving(true); setError('');
         try {
             if (isEdit) {
-                await api.put(`/customer-services/${service.id}`, form);
+                await api.put(`/customer-services/${service.id}`, {
+                    account_number: form.account_number,
+                    plan_name: form.plan_name,
+                    label: form.label,
+                    address: form.address
+                });
             } else {
-                await api.post(`/customers/${customer.id}/services`, form);
+                await api.post(`/customers/${customer.id}/services`, {
+                    account_number: form.account_number,
+                    plan_name: form.plan_name,
+                    label: form.label,
+                    address: form.address
+                });
             }
             onSave();
         } catch (err) {
@@ -30,7 +47,7 @@ function ServiceModal({ customer, service, onClose, onSave }) {
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 650 }}>
                 <div className="modal-header">
                     <h2>{isEdit ? 'Editar Servicio' : 'Agregar Servicio'}</h2>
                     <button className="btn-icon" onClick={onClose}><X size={18} /></button>
@@ -48,18 +65,46 @@ function ServiceModal({ customer, service, onClose, onSave }) {
                                 <input className="form-input" value={form.account_number} onChange={e => setForm({ ...form, account_number: e.target.value })} required placeholder="Ej: BG-100" />
                             </div>
                             <div className="form-group">
-                                <label className="form-label">Plan</label>
-                                <input className="form-input" value={form.plan_name} onChange={e => setForm({ ...form, plan_name: e.target.value })} placeholder="Ej: HOME HIGH 300" />
+                                <label className="form-label">Plan del Servicio</label>
+                                <select className="form-input" value={form.plan_name} onChange={e => setForm({ ...form, plan_name: e.target.value })}>
+                                    <option value="">-- Seleccionar Plan --</option>
+                                    {plans.map(p => (
+                                        <option key={p.id} value={p.name}>{p.name} ({p.speed})</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 16 }}>
+                            <div className="form-group">
+                                <label className="form-label">Código Postal</label>
+                                <select className="form-input" value={form.zip_code} onChange={e => setForm({ ...form, zip_code: e.target.value, neighborhood: '' })}>
+                                    <option value="">-- CP --</option>
+                                    {uniqueZips.map(zip => <option key={zip} value={zip}>{zip}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Colonia (Rellena la dirección automáticamente)</label>
+                                <select className="form-input" value={form.neighborhood} onChange={e => {
+                                    const col = e.target.value;
+                                    setForm({
+                                        ...form,
+                                        neighborhood: col,
+                                        address: form.address ? `${form.address}, Col. ${col}` : `Col. ${col}`
+                                    });
+                                }} disabled={!form.zip_code}>
+                                    <option value="">-- Seleccionar Colonia --</option>
+                                    {availableNeighborhoods.map(n => <option key={n} value={n}>{n}</option>)}
+                                </select>
                             </div>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                             <div className="form-group">
-                                <label className="form-label">Etiqueta</label>
-                                <input className="form-input" value={form.label} onChange={e => setForm({ ...form, label: e.target.value })} placeholder="Ej: Casa, Oficina..." />
+                                <label className="form-label">Dirección Completa (Calle, No, Colonia)</label>
+                                <input className="form-input" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Ej: Av. Juárez #123, Col. Centro" />
                             </div>
                             <div className="form-group">
-                                <label className="form-label">Dirección (Opcional)</label>
-                                <input className="form-input" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Ej: Av. Juárez #123" />
+                                <label className="form-label">Etiqueta</label>
+                                <input className="form-input" value={form.label} onChange={e => setForm({ ...form, label: e.target.value })} placeholder="Ej: Casa, Oficina..." />
                             </div>
                         </div>
                     </div>
@@ -75,18 +120,23 @@ function ServiceModal({ customer, service, onClose, onSave }) {
     );
 }
 
-function CustomerModal({ customer, coverageAreas = [], onClose, onSave }) {
+function CustomerModal({ customer, coverageAreas = [], plans = [], onClose, onSave }) {
     const isEdit = !!customer;
     const [form, setForm] = useState({
         name: customer?.name || '',
         phone: customer?.phone || '',
         address: customer?.address || '',
         zip_code: customer?.zip_code || '',
+        neighborhood: '',
         account_number: '',
         plan_name: '',
         label: '',
     });
     const uniqueZips = [...new Set(coverageAreas.map(c => c.zip_code))].filter(Boolean);
+    const availableNeighborhoods = form.zip_code
+        ? coverageAreas.filter(c => c.zip_code === form.zip_code).map(c => c.neighborhood)
+        : [];
+
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
@@ -107,7 +157,7 @@ function CustomerModal({ customer, coverageAreas = [], onClose, onSave }) {
 
     return (
         <div className="modal-overlay" onClick={onClose}>
-            <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 650 }}>
                 <div className="modal-header">
                     <h2>{isEdit ? 'Editar Cliente' : 'Nuevo Cliente'}</h2>
                     <button className="btn-icon" onClick={onClose}><X size={18} /></button>
@@ -129,20 +179,34 @@ function CustomerModal({ customer, coverageAreas = [], onClose, onSave }) {
                                 <input className="form-input" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required placeholder="521722..." />
                             </div>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: 16 }}>
                             <div className="form-group">
-                                <label className="form-label">Dirección (Calle, No, Colonia)</label>
-                                <input className="form-input" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Ej: Calle Principal #123" />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">Código Postal (Cobertura)</label>
-                                <select className="form-input" value={form.zip_code} onChange={e => setForm({ ...form, zip_code: e.target.value })} required={!isEdit}>
-                                    <option value="">-- Seleccionar CP --</option>
+                                <label className="form-label">Código Postal</label>
+                                <select className="form-input" value={form.zip_code} onChange={e => setForm({ ...form, zip_code: e.target.value, neighborhood: '' })} required={!isEdit}>
+                                    <option value="">-- CP --</option>
                                     {uniqueZips.map(zip => (
                                         <option key={zip} value={zip}>{zip}</option>
                                     ))}
                                 </select>
                             </div>
+                            <div className="form-group">
+                                <label className="form-label">Colonia (Rellena la dirección automáticamente)</label>
+                                <select className="form-input" value={form.neighborhood} onChange={e => {
+                                    const col = e.target.value;
+                                    setForm({
+                                        ...form,
+                                        neighborhood: col,
+                                        address: form.address ? `${form.address}, Col. ${col}` : `Col. ${col}`
+                                    });
+                                }} disabled={!form.zip_code}>
+                                    <option value="">-- Seleccionar Colonia --</option>
+                                    {availableNeighborhoods.map(n => <option key={n} value={n}>{n}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">Dirección Completa (Calle, No, Colonia)</label>
+                            <input className="form-input" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Ej: Calle Principal #123, Col. Centro" />
                         </div>
                         {!isEdit && (
                             <>
@@ -155,8 +219,13 @@ function CustomerModal({ customer, coverageAreas = [], onClose, onSave }) {
                                         <input className="form-input" value={form.account_number} onChange={e => setForm({ ...form, account_number: e.target.value })} required placeholder="BG-100" />
                                     </div>
                                     <div className="form-group">
-                                        <label className="form-label">Plan</label>
-                                        <input className="form-input" value={form.plan_name} onChange={e => setForm({ ...form, plan_name: e.target.value })} placeholder="HOME HIGH 300" />
+                                        <label className="form-label">Plan del Servicio</label>
+                                        <select className="form-input" value={form.plan_name} onChange={e => setForm({ ...form, plan_name: e.target.value })}>
+                                            <option value="">-- Seleccionar Plan --</option>
+                                            {plans.map(p => (
+                                                <option key={p.id} value={p.name}>{p.name} ({p.speed})</option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
                                 <div className="form-group">
@@ -181,6 +250,7 @@ function CustomerModal({ customer, coverageAreas = [], onClose, onSave }) {
 export default function Customers() {
     const [customers, setCustomers] = useState([]);
     const [coverageAreas, setCoverageAreas] = useState([]);
+    const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [expanded, setExpanded] = useState({});
@@ -197,12 +267,14 @@ export default function Customers() {
     async function loadCustomers() {
         setLoading(true);
         try {
-            const [custRes, covRes] = await Promise.all([
+            const [custRes, covRes, planRes] = await Promise.all([
                 api.get('/customers', { params: { search } }),
-                api.get('/coverage?limit=500')
+                api.get('/coverage?limit=500'),
+                api.get('/plans')
             ]);
             setCustomers(custRes.data.data || custRes.data);
             setCoverageAreas(covRes.data.data || covRes.data || []);
+            setPlans(planRes.data.data || planRes.data || []);
         } catch { } finally { setLoading(false); }
     }
 
@@ -344,11 +416,11 @@ export default function Customers() {
             </div>
 
             {showCustomerModal && (
-                <CustomerModal customer={editingCustomer} coverageAreas={coverageAreas} onClose={() => setShowCustomerModal(false)} onSave={() => { setShowCustomerModal(false); loadCustomers(); }} />
+                <CustomerModal customer={editingCustomer} coverageAreas={coverageAreas} plans={plans} onClose={() => setShowCustomerModal(false)} onSave={() => { setShowCustomerModal(false); loadCustomers(); }} />
             )}
 
             {showServiceModal && (
-                <ServiceModal customer={serviceTarget.customer} service={serviceTarget.service} onClose={() => setShowServiceModal(false)} onSave={() => { setShowServiceModal(false); loadCustomers(); }} />
+                <ServiceModal customer={serviceTarget.customer} service={serviceTarget.service} coverageAreas={coverageAreas} plans={plans} onClose={() => setShowServiceModal(false)} onSave={() => { setShowServiceModal(false); loadCustomers(); }} />
             )}
         </div>
     );
