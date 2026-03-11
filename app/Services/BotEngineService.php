@@ -212,16 +212,18 @@ class BotEngineService
             $conversation->save();
         }
 
-        // 3. Execute action if defined FIRST and step is action_only
-        if ($step->action_type && $step->response_type === 'action_only') {
+        // 3. Execute action if defined
+        if ($step->action_type) {
             $actionResult = $this->executeAction($conversation, $step->action_type, $data, $step->action_config);
-            if (isset($actionResult['_next_step'])) {
-                $next = BotFlowStep::where('step_key', $actionResult['_next_step'])->first();
-                if ($next)
-                    return $this->executeStep($conversation, $next);
-            }
-            if (isset($actionResult['type'])) {
-                return $this->attachMedia($actionResult, $step);
+            if ($step->response_type === 'action_only') {
+                if (isset($actionResult['_next_step'])) {
+                    $next = BotFlowStep::where('step_key', $actionResult['_next_step'])->first();
+                    if ($next)
+                        return $this->executeStep($conversation, $next);
+                }
+                if (isset($actionResult['type'])) {
+                    return $this->attachMedia($actionResult, $step);
+                }
             }
         }
 
@@ -458,9 +460,12 @@ class BotEngineService
                 }
                 $msg .= "💰 $" . number_format($plan->price, 2) . "/mes\n\n";
 
+                $cleanName = str_replace('BGITAL ', '', $plan->name);
+                $title = mb_substr($cleanName . ' - ' . $plan->speed, 0, 24);
+
                 $options[] = [
                     'id' => 'plan_' . $plan->id,
-                    'title' => 'Me interesa ' . $plan->name,
+                    'title' => $title,
                     'action' => 'select_plan',
                     'action_config' => ['plan_id' => $plan->id, 'plan_name' => $plan->name]
                 ];
@@ -503,10 +508,11 @@ class BotEngineService
                 continue;
 
             foreach ($kws as $kw) {
-                if (mb_strlen($kw) > 3 && $this->fuzzyMatch($text, mb_strtolower(trim($kw)))) {
+                $normalizedKw = $this->normalize($kw);
+                if (mb_strlen($text) > 3 && $this->fuzzyMatch($text, $normalizedKw)) {
                     return $flow;
                 }
-                elseif (Str::contains($text, mb_strtolower(trim($kw)))) {
+                elseif (Str::contains($text, $normalizedKw) || Str::contains($normalizedKw, $text)) {
                     return $flow;
                 }
             }
