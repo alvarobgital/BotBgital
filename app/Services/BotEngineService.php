@@ -483,6 +483,13 @@ class BotEngineService
             return ['_next_step' => 'confirm_plan'];
         }
 
+        if ($actionType === 'set_category') {
+            $data['selected_category'] = $config['category'] ?? 'Hogar';
+            $conversation->bot_state_data = $data;
+            $conversation->save();
+            return ['_next_step' => 'show_plans'];
+        }
+
         return [];
     }
 
