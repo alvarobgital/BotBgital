@@ -20,12 +20,13 @@ class TelegramService
         }
 
         try {
+            file_put_contents(base_path('bot_debug.log'), date('[Y-m-d H:i:s]') . " TelegramService: Sending message to $chatId\n", FILE_APPEND);
             Log::info("TelegramService: Sending message", ['chat_id' => $chatId, 'text_preview' => mb_substr($message, 0, 50)]);
             $url = "https://api.telegram.org/bot{$token}/sendMessage";
             $response = Http::post($url, [
                 'chat_id' => $chatId,
                 'text' => $message,
-                'parse_mode' => 'Markdown'
+                'parse_mode' => 'HTML'
             ]);
 
             if (!$response->successful()) {
@@ -60,19 +61,19 @@ class TelegramService
         $summary = $data['summary'] ?? '';
         $name = $data['name'] ?? 'Desconocido';
 
-        $text = "🟢 *NUEVO PROSPECTO — BGITAL Telecomunicaciones*\n";
+        $text = "<b>🟢 NUEVO PROSPECTO — BGITAL Telecomunicaciones</b>\n";
         $text .= "━━━━━━━━━━━━━━━━━━\n";
-        $text .= "👤 *Tipo:* Posible Cliente\n";
-        $text .= "👤 *Nombre:* {$name}\n";
-        $text .= "📱 *Teléfono:* +{$phone}\n";
-        $text .= "📍 *CP:* {$zip}\n";
-        $text .= "🏘️ *Colonia:* {$colonia}\n";
-        $text .= "🏢 *Tipo:* {$category}\n";
-        $text .= "📦 *Plan de interés:* {$plan}\n";
-        if ($price) $text .= "💰 *Precio:* {$price}\n";
-        $text .= "\n💬 *Resumen:*\n{$summary}\n";
+        $text .= "👤 <b>Tipo:</b> Posible Cliente\n";
+        $text .= "👤 <b>Nombre:</b> " . htmlspecialchars($name) . "\n";
+        $text .= "📱 <b>Teléfono:</b> +" . $phone . "\n";
+        $text .= "📍 <b>CP:</b> " . $zip . "\n";
+        $text .= "🏘️ <b>Colonia:</b> " . htmlspecialchars($colonia) . "\n";
+        $text .= "🏢 <b>Tipo:</b> " . htmlspecialchars($category) . "\n";
+        $text .= "📦 <b>Plan de interés:</b> " . htmlspecialchars($plan) . "\n";
+        if ($price) $text .= "💰 <b>Precio:</b> " . htmlspecialchars($price) . "\n";
+        $text .= "\n💬 <b>Resumen:</b>\n" . htmlspecialchars($summary) . "\n";
         $text .= "━━━━━━━━━━━━━━━━━━\n";
-        $text .= "📅 *Fecha y hora:* " . now()->setTimezone('America/Mexico_City')->format('d/m/Y — h:i a');
+        $text .= "📅 <b>Fecha y hora:</b> " . now()->setTimezone('America/Mexico_City')->format('d/m/Y — h:i a');
 
         return self::sendMessage($text);
     }
@@ -87,17 +88,17 @@ class TelegramService
         $reason = $data['reason'] ?? 'Problema técnico no resuelto';
         $summary = $data['summary'] ?? '';
 
-        $text = "🚨 *ALERTA TÉCNICA — BGITAL Telecomunicaciones*\n";
+        $text = "<b>🚨 ALERTA TÉCNICA — BGITAL Telecomunicaciones</b>\n";
         $text .= "━━━━━━━━━━━━━━━━━━\n";
-        $text .= "👤 *Nombre:* {$name}\n";
-        $text .= "📱 *Teléfono:* +{$phone}\n";
-        $text .= "🔢 *Cuenta:* {$account}\n";
-        $text .= "📦 *Plan:* {$plan}\n";
-        $text .= "✅ *Estado:* {$status}\n";
-        $text .= "🔴 *Motivo:* {$reason}\n";
-        $text .= "\n💬 *Resumen de la conversación:*\n{$summary}\n";
+        $text .= "👤 <b>Nombre:</b> " . htmlspecialchars($name) . "\n";
+        $text .= "📱 <b>Teléfono:</b> +" . $phone . "\n";
+        $text .= "🔢 <b>Cuenta:</b> " . htmlspecialchars($account) . "\n";
+        $text .= "📦 <b>Plan:</b> " . htmlspecialchars($plan) . "\n";
+        $text .= "✅ <b>Estado:</b> " . htmlspecialchars($status) . "\n";
+        $text .= "🔴 <b>Motivo:</b> " . htmlspecialchars($reason) . "\n";
+        $text .= "\n💬 <b>Resumen de la conversación:</b>\n" . htmlspecialchars($summary) . "\n";
         $text .= "━━━━━━━━━━━━━━━━━━\n";
-        $text .= "📅 *Fecha y hora:* " . now()->setTimezone('America/Mexico_City')->format('d/m/Y — h:i a');
+        $text .= "📅 <b>Fecha y hora:</b> " . now()->setTimezone('America/Mexico_City')->format('d/m/Y — h:i a');
 
         return self::sendMessage($text);
     }
@@ -110,26 +111,26 @@ class TelegramService
         $zonesAvailable = $data['zones_available'] ?? '';
         $coloniaInput = $data['colonia_input'] ?? 'NO aparece en zonas cubiertas';
 
-        $text = "🟡 *PROSPECTO SIN COBERTURA — BGITAL Telecomunicaciones*\n";
+        $text = "<b>🟡 PROSPECTO SIN COBERTURA — BGITAL Telecomunicaciones</b>\n";
         $text .= "━━━━━━━━━━━━━━━━━━\n";
-        $text .= "👤 *Tipo:* Posible Cliente\n";
-        $text .= "📱 *Teléfono:* +{$phone}\n";
-        $text .= "📍 *CP:* {$zip}\n";
-        $text .= "🏘️ *Colonia:* {$coloniaInput}\n";
+        $text .= "👤 <b>Tipo:</b> Posible Cliente\n";
+        $text .= "📱 <b>Teléfono:</b> +" . $phone . "\n";
+        $text .= "📍 <b>CP:</b> " . $zip . "\n";
+        $text .= "🏘️ <b>Colonia:</b> " . htmlspecialchars($coloniaInput) . "\n";
         if ($zonesAvailable) {
-            $text .= "   (Zonas disponibles en ese CP: {$zonesAvailable})\n";
+            $text .= "   (Zonas disponibles en ese CP: " . htmlspecialchars($zonesAvailable) . ")\n";
         }
-        $text .= "🏢 *Tipo de servicio:* {$category}\n";
-        $text .= "\n💬 *Resumen:*\n";
-        $text .= "— Verificó cobertura en CP {$zip}\n";
+        $text .= "🏢 <b>Tipo de servicio:</b> " . htmlspecialchars($category) . "\n";
+        $text .= "\n💬 <b>Resumen:</b>\n";
+        $text .= "— Verificó cobertura en CP " . $zip . "\n";
         $text .= "— Confirmó que su colonia NO tiene cobertura ❌\n";
-        $text .= "— Interesado en contratar servicio {$category}\n";
+        $text .= "— Interesado en contratar servicio " . htmlspecialchars($category) . "\n";
         $text .= "— Bot escaló a asesor humano automáticamente\n";
-        $text .= "\n⚠️ *Acción requerida:*\n";
+        $text .= "\n⚠️ <b>Acción requerida:</b>\n";
         $text .= "— Evaluar si se puede ampliar cobertura a su zona\n";
         $text .= "— O bien ofrecer alternativa / lista de espera\n";
         $text .= "━━━━━━━━━━━━━━━━━━\n";
-        $text .= "📅 *Fecha y hora:* " . now()->setTimezone('America/Mexico_City')->format('d/m/Y — h:i a');
+        $text .= "📅 <b>Fecha y hora:</b> " . now()->setTimezone('America/Mexico_City')->format('d/m/Y — h:i a');
 
         return self::sendMessage($text);
     }

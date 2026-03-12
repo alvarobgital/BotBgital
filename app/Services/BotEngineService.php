@@ -262,6 +262,7 @@ class BotEngineService
             'conversation_id' => $conversation->id,
             'contact_phone' => $conversation->contact->phone
         ]);
+        file_put_contents(base_path('bot_debug.log'), date('[Y-m-d H:i:s]') . " BotEngine: Action $actionType | Phone: {$conversation->contact->phone}\n", FILE_APPEND);
         if ($actionType === 'close_conversation') {
             $this->resetState($conversation);
             return []; // Handled by step message usually
@@ -317,6 +318,7 @@ class BotEngineService
                     'reason' => $reason,
                     'summary' => $recentTxt
                 ];
+                file_put_contents(base_path('bot_debug.log'), date('[Y-m-d H:i:s]') . " BotEngine: Calling notifyTechnicalAlert for {$notifyData['name']}\n", FILE_APPEND);
                 TelegramService::notifyTechnicalAlert($notifyData);
             }
             else {
@@ -331,6 +333,7 @@ class BotEngineService
                         'zones_available' => str_replace(["\n👉 ", "\n"], [' / ', ''], $data['coverage_zones'] ?? ''),
                         'colonia_input' => $data['colonia_input'] ?? 'NO aparece en zonas cubiertas'
                     ];
+                    file_put_contents(base_path('bot_debug.log'), date('[Y-m-d H:i:s]') . " BotEngine: Calling notifyProspectNoCoverage for $phone\n", FILE_APPEND);
                     TelegramService::notifyProspectNoCoverage($notifyData);
                 } else {
                     $notifyData = [
@@ -343,6 +346,7 @@ class BotEngineService
                         'summary' => "— Verificó cobertura en CP " . ($data['zip_code'] ?? 'N/A') . " ✅\n— Interesado en planes " . strtolower($category) . "\n— Seleccionó el plan " . ($data['selected_plan'] ?? 'No especificado'),
                         'name' => $data['customer_name'] ?? $conversation->contact->name ?? 'Prospecto'
                     ];
+                    file_put_contents(base_path('bot_debug.log'), date('[Y-m-d H:i:s]') . " BotEngine: Calling notifyNewProspect for $phone\n", FILE_APPEND);
                     TelegramService::notifyNewProspect($notifyData);
                 }
             }
