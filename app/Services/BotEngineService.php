@@ -134,7 +134,15 @@ class BotEngineService
         if (!$selectedOption && $step->action_type === 'show_plans') {
             $plans = \App\Models\Plan::where('is_active', true)->get();
             foreach ($plans as $plan) {
-                if ($normalizedText === 'plan_' . $plan->id || $this->fuzzyMatch($normalizedText, mb_strtolower('Me interesa ' . $plan->name)) || $this->fuzzyMatch($normalizedText, mb_strtolower($plan->name))) {
+                $planId = (string)$plan->id;
+                // Match ID (with or without underscore), fuzzy name match, or exact name match
+                if (
+                    $normalizedText === 'plan_' . $planId || 
+                    $normalizedText === 'plan' . $planId || 
+                    str_contains($normalizedText, 'plan' . $planId) ||
+                    $this->fuzzyMatch($normalizedText, mb_strtolower('Me interesa ' . $plan->name)) || 
+                    $this->fuzzyMatch($normalizedText, mb_strtolower($plan->name))
+                ) {
                     $selectedOption = [
                         'action' => 'select_plan',
                         'action_config' => ['plan_id' => $plan->id, 'plan_name' => $plan->name]
@@ -250,6 +258,7 @@ class BotEngineService
 
     private function executeAction(Conversation $conversation, string $actionType, array &$data, ?array $config = []): array
     {
+        Log::info("BotEngine: Executing action", ['type' => $actionType, 'config' => $config]);
         if ($actionType === 'close_conversation') {
             $this->resetState($conversation);
             return []; // Handled by step message usually
@@ -392,22 +401,34 @@ class BotEngineService
         }
 
         if ($actionType === 'create_lead') {
-            $planCategory = $data['selected_category'] ?? 'Hogar';
-            $planName = $data['selected_plan'] ?? 'No especificado';
-            $zip = $data['zip_code'] ?? null;
-            $phone = $conversation->contact->phone;
+            try {
+                $planCategory = $data['selected_category'] ?? 'Hogar';
+                $planName = $data['selected_plan'] ?? 'No especificado';
+                $zip = $data['zip_code'] ?? null;
+                $phone = $conversation->contact->phone;
 
-            SalesLead::create([
-                'contact_id' => $conversation->contact->id,
-                'conversation_id' => $conversation->id,
-                'plan_interest' => $planName,
-                'client_type' => $planCategory,
-                'zip_code' => $zip,
-                'phone' => $phone,
-                'status' => 'pending',
-            ]);
+                // Avoid duplicate leads if triggered multiple times
+                $exists = SalesLead::where('conversation_id', $conversation->id)
+                    ->where('plan_interest', $planName)
+                    ->exists();
 
-            TelegramService::sendMessage("📡 *Nuevo Lead BGITAL*\n\n📱 Tel: {$phone}\n📦 Plan: {$planName}\n📍 CP: {$zip}");
+                if (!$exists) {
+                    SalesLead::create([
+                        'contact_id' => $conversation->contact->id,
+                        'conversation_id' => $conversation->id,
+                        'plan_interest' => $planName,
+                        'client_type' => $planCategory,
+                        'zip_code' => $zip,
+                        'phone' => $phone,
+                        'status' => 'pending',
+                    ]);
+
+                    TelegramService::sendMessage("📡 *Nuevo Lead BGITAL*\n\n📱 Tel: {$phone}\n📦 Plan: {$planName}\n📍 CP: {$zip}");
+                }
+            } catch (\Exception $e) {
+                Log::error("BotEngine: create_lead action failed: " . $e->getMessage());
+            }
+
             $this->resetState($conversation);
             return [];
         }
@@ -482,9 +503,17 @@ class BotEngineService
         }
 
         if ($actionType === 'select_plan') {
-            $data['selected_plan'] = $config['plan_name'] ?? '';
+            $data['selected_plan'] = $config['plan_name'] ?? 'Plan seleccionado';
             $conversation->bot_state_data = $data;
             $conversation->save();
+
+            // Notify immediately to avoid loss if user doesn't follow through
+            try {
+                $this->executeAction($conversation, 'create_lead', $data);
+            } catch (\Exception $e) {
+                Log::error("BotEngine: select_plan lead auto-trigger failed: " . $e->getMessage());
+            }
+
             return ['_next_step' => 'confirm_plan'];
         }
 
@@ -582,7 +611,8 @@ class BotEngineService
     {
         $t = mb_strtolower(trim($text));
         $t = strtr($t, ['á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ñ' => 'n']);
-        return preg_replace('/[^\w\s]/', '', $t);
+        // Preserve alphanumeric, underscores and spaces
+        return preg_replace('/[^a-z0-9_\s]/', '', $t);
     }
 
     private function fuzzyMatch(string $input, string $target): bool

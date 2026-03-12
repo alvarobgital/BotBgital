@@ -33,11 +33,21 @@ class ProcessIncomingMessage implements ShouldQueue
             return;
         }
 
-        $botEngine = new BotEngineService();
-        $response = $botEngine->handleSequence(
-            $this->conversation,
-            $this->message->content
-        );
+        try {
+            $botEngine = new BotEngineService();
+            $response = $botEngine->handleSequence(
+                $this->conversation,
+                $this->message->content
+            );
+        } catch (\Exception $e) {
+            Log::error('ProcessIncomingMessage: handleSequence failed', [
+                'conversation_id' => $this->conversation->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            // Optional: return a fallback response
+            $response = ['type' => 'text', 'text' => "Lo siento, tuve un error interno. Por favor escribe *reiniciar*."];
+        }
 
         if (empty($response)) {
             return;
