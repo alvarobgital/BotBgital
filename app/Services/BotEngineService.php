@@ -273,7 +273,7 @@ class BotEngineService
             $conversation->save();
 
             $reason = $config['reason'] ?? 'Solicitud desde flujo conversacional';
-            $isCustomer = $conversation->contact->is_customer;
+            $isCustomer = ($conversation->contact->type === 'customer');
             $phone = $conversation->contact->phone;
             $interest = $data['selected_plan'] ?? $data['plan_name'] ?? 'No especificado';
             $zip = $data['zip_code'] ?? 'N/A';
@@ -372,7 +372,7 @@ class BotEngineService
 
                 // Mark contact as customer
                 if ($conversation->contact) {
-                    $conversation->contact->is_customer = true;
+                    $conversation->contact->type = 'customer';
                     $conversation->contact->save();
                 }
 
@@ -501,7 +501,7 @@ class BotEngineService
                     'id' => 'plan_' . $plan->id,
                     'title' => $title,
                     'action' => 'select_plan',
-                    'action_config' => ['plan_id' => $plan->id, 'plan_name' => $plan->name]
+                    'action_config' => ['plan_id' => $plan->id, 'plan_name' => $plan->name, 'price' => $plan->price]
                 ];
             }
 
@@ -517,6 +517,7 @@ class BotEngineService
 
         if ($actionType === 'select_plan') {
             $data['selected_plan'] = $config['plan_name'] ?? 'Plan seleccionado';
+            $data['plan_price'] = isset($config['price']) ? "$" . number_format($config['price'], 2) . "/mes" : '';
             $conversation->bot_state_data = $data;
             $conversation->save();
 
