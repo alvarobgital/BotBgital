@@ -1,39 +1,32 @@
 <?php
 require 'vendor/autoload.php';
 $app = require_once 'bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
-$kernel->bootstrap();
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
+use App\Services\TelegramService;
+use App\Models\Setting;
 
-// Update Telegram Settings
-\App\Models\Setting::updateOrCreate(
-['key' => 'telegram_bot_token'],
-['value' => '8695075480:AAEXWJ-MkGhMaz6lLRf2KxveznZFfSVg3w8', 'type' => 'string', 'display_name' => 'Telegram Bot Token', 'group' => 'Integraciones']
-);
+$token = '8695075480:AAEXWJ-MkGhMaz6lLRf2KxveznZFfSVg3w8';
+$chatId = '-1003720862916';
 
-\App\Models\Setting::updateOrCreate(
-['key' => 'telegram_notify_group_id'],
-['value' => '@botBgital', 'type' => 'string', 'display_name' => 'Telegram Chat ID', 'group' => 'Integraciones']
-);
+echo "--- TEST TELEGRAM DIRECT ---" . PHP_EOL;
+echo "Token from user: $token" . PHP_EOL;
+echo "Chat ID from user: $chatId" . PHP_EOL;
 
-echo "Settings updated.\n";
+// Update settings to be sure
+Setting::updateOrCreate(['key' => 'telegram_bot_token'], ['value' => $token]);
+Setting::updateOrCreate(['key' => 'telegram_notify_group_id'], ['value' => $chatId]);
 
-// Test Message
-$res = \App\Services\TelegramService::sendMessage("✅ *Bot BGITAL* conectado exitosamente.\n_Prueba de notificaciones cortas._");
+echo "Settings updated in DB." . PHP_EOL;
 
-if ($res) {
-    echo "Test message sent to Telegram successfully.\n";
-}
-else {
-    echo "Failed to send test message to Telegram. Ensure the bot is admin in @botBgital.\n";
-    // Check API response directly
-    $token = '8695075480:AAEXWJ-MkGhMaz6lLRf2KxveznZFfSVg3w8';
-    $url = "https://api.telegram.org/bot{$token}/sendMessage";
-    $response = \Illuminate\Support\Facades\Http::post($url, [
-        'chat_id' => '@botBgital',
-        'text' => 'Prueba directa',
-    ]);
-    echo "API Response: " . $response->body() . "\n";
+$msg = "<b>🧪 PRUEBA DIRECTA DE CONECTIVIDAD</b>\n" .
+       "Si puedes leer esto, el Bot está configurado correctamente.\n" .
+       "Fecha: " . date('d/m/Y H:i:s');
+
+$result = TelegramService::sendMessage($msg);
+
+if ($result) {
+    echo "SUCCESS: Message sent to Telegram." . PHP_EOL;
+} else {
+    echo "FAILED: Check bot_debug.log." . PHP_EOL;
 }

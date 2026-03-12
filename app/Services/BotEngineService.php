@@ -153,6 +153,11 @@ class BotEngineService
         }
 
         if ($selectedOption) {
+            // Capture selection for summary
+            if (isset($selectedOption['title'])) {
+                $data['last_selection'] = $selectedOption['title'];
+            }
+
             if (!empty($selectedOption['action'])) {
                 $actionResult = $this->executeAction($conversation, $selectedOption['action'], $data, $selectedOption['action_config'] ?? []);
 
@@ -220,8 +225,11 @@ class BotEngineService
             $conversation->save();
         }
 
-        // 3. Execute action if defined (only if action_only)
-        if ($step->action_type && $step->response_type === 'action_only') {
+        // 3. Execute action if defined
+        // We exclude actions that RELY on user input from executing upon entering the step.
+        $inputActions = ['check_coverage', 'validate_client'];
+
+        if ($step->action_type && !in_array($step->action_type, $inputActions)) {
             $actionResult = $this->executeAction($conversation, $step->action_type, $data, $step->action_config);
             if (isset($actionResult['_next_step'])) {
                 $next = BotFlowStep::where('step_key', $actionResult['_next_step'])->first();
@@ -309,14 +317,22 @@ class BotEngineService
             if (empty($recentTxt)) $recentTxt = "Sin mensajes previos.";
 
             if ($isCustomer) {
+                $faultLabel = $data['last_selection'] ?? 'Problema técnico';
+                $summary = "— Cliente reportó: $faultLabel\n";
+                $summary .= "— Bot aplicó guía de solución paso a paso\n";
+                $summary .= "— Cliente confirmó: Sigue Fallando ❌\n";
+                if (str_contains(mb_strtolower($faultLabel), 'internet') || str_contains(mb_strtolower($faultLabel), 'conexión')) {
+                    $summary .= "— Posible causa: Luz LOS en rojo (corte externo de fibra)\n";
+                }
+
                 $notifyData = [
                     'name' => $data['customer_name'] ?? $conversation->contact->name ?? 'Prueba',
                     'phone' => $phone,
                     'account' => $data['account_number'] ?? 'N/A',
                     'plan' => $data['plan_name'] ?? 'N/A',
                     'status' => 'Activo',
-                    'reason' => $reason,
-                    'summary' => $recentTxt
+                    'reason' => 'Problema técnico no resuelto tras guía de solución',
+                    'summary' => $summary
                 ];
                 file_put_contents(base_path('bot_debug.log'), date('[Y-m-d H:i:s]') . " BotEngine: Calling notifyTechnicalAlert for {$notifyData['name']}\n", FILE_APPEND);
                 TelegramService::notifyTechnicalAlert($notifyData);
@@ -440,7 +456,17 @@ class BotEngineService
                         'status' => 'pending',
                     ]);
 
-                    TelegramService::sendMessage("📡 *Nuevo Lead BGITAL*\n\n📱 Tel: {$phone}\n📦 Plan: {$planName}\n📍 CP: {$zip}");
+                    $notifyData = [
+                        'phone' => $phone,
+                        'zip' => $zip,
+                        'colonia' => $data['neighborhood'] ?? 'Confirmada en zona de cobertura',
+                        'category' => $planCategory,
+                        'plan' => $planName,
+                        'price' => $data['plan_price'] ?? '',
+                        'summary' => "— Verificó cobertura en CP " . ($zip ?? 'N/A') . " ✅\n— Confirmó que su colonia tiene cobertura\n— Interesado en planes " . strtolower($planCategory) . "\n— Seleccionó el plan " . $planName,
+                        'name' => $data['customer_name'] ?? $conversation->contact->name ?? 'Prospecto'
+                    ];
+                    TelegramService::notifyNewProspect($notifyData);
                 }
             } catch (\Exception $e) {
                 Log::error("BotEngine: create_lead action failed: " . $e->getMessage());
