@@ -220,16 +220,18 @@ class BotEngineService
             $conversation->save();
         }
 
-        // 3. Execute action if defined (only if action_only)
-        if ($step->action_type && $step->response_type === 'action_only') {
+        // 3. Execute action if defined
+        if ($step->action_type) {
             $actionResult = $this->executeAction($conversation, $step->action_type, $data, $step->action_config);
-            if (isset($actionResult['_next_step'])) {
-                $next = BotFlowStep::where('step_key', $actionResult['_next_step'])->first();
-                if ($next)
-                    return $this->executeStep($conversation, $next);
-            }
-            if (isset($actionResult['type'])) {
-                return $this->attachMedia($actionResult, $step);
+            if ($step->response_type === 'action_only') {
+                if (isset($actionResult['_next_step'])) {
+                    $next = BotFlowStep::where('step_key', $actionResult['_next_step'])->first();
+                    if ($next)
+                        return $this->executeStep($conversation, $next);
+                }
+                if (isset($actionResult['type'])) {
+                    return $this->attachMedia($actionResult, $step);
+                }
             }
         }
 
@@ -256,12 +258,7 @@ class BotEngineService
 
     private function executeAction(Conversation $conversation, string $actionType, array &$data, ?array $config = []): array
     {
-        Log::info("BotEngine: Executing action", [
-            'type' => $actionType,
-            'config' => $config,
-            'conversation_id' => $conversation->id,
-            'contact_phone' => $conversation->contact->phone
-        ]);
+        Log::info("BotEngine: Executing action", ['type' => $actionType, 'config' => $config]);
         if ($actionType === 'close_conversation') {
             $this->resetState($conversation);
             return []; // Handled by step message usually
@@ -295,56 +292,47 @@ class BotEngineService
                 );
             }
 
-            $messages = $conversation->messages()->orderByDesc('created_at')->take(8)->get()->reverse();
+            $messages = $conversation->messages()->orderByDesc('created_at')->take(2)->get()->reverse();
             $recentTxt = "";
-            $lastClientMsg = "";
-            $lastBotMsg = "";
             foreach ($messages as $msg) {
-                $sender = $msg->direction === 'inbound' ? '👤 Cliente' : '🤖 Bot';
-                $recentTxt .= "— {$sender}: {$msg->content}\n";
-                if ($msg->direction === 'inbound') $lastClientMsg = $msg->content;
-                else $lastBotMsg = $msg->content;
+                $sender = $msg->direction === 'inbound' ? 'C' : 'B';
+                $recentTxt .= "_{$sender}:_ {$msg->content}\n";
             }
-            if (empty($recentTxt)) $recentTxt = "Sin mensajes previos.";
+            if (empty($recentTxt))
+                $recentTxt = "Sin mensajes.";
 
-            if ($isCustomer) {
-                $notifyData = [
-                    'name' => $data['customer_name'] ?? $conversation->contact->name ?? 'Prueba',
+            if ($isCustomer || !empty($data['account_number'])) {
+                $name = $data['customer_name'] ?? $conversation->contact->name ?? 'Cliente';
+                $account = $data['account_number'] ?? 'N/A';
+                $plan = $data['plan_name'] ?? 'N/A';
+
+                $address = $data['customer_address'] ?? 'No registrada';
+                if ($address === 'No registrada' && !empty($account)) {
+                    $service = \App\Models\CustomerService::with('customer')->where('account_number', $account)->first();
+                    if ($service) {
+                        $address = $service->address ?? $service->customer->address ?? 'No registrada';
+                    }
+                }
+
+                TelegramService::notifySupportRequired([
+                    'name' => $name,
                     'phone' => $phone,
-                    'account' => $data['account_number'] ?? 'N/A',
-                    'plan' => $data['plan_name'] ?? 'N/A',
-                    'status' => 'Activo',
-                    'reason' => $reason,
-                    'summary' => $recentTxt
-                ];
-                TelegramService::notifyTechnicalAlert($notifyData);
+                    'account' => $account,
+                    'problem' => $reason,
+                    'address' => $address,
+                    'plan' => $plan,
+                    'context' => $recentTxt
+                ]);
             }
             else {
-                $category = $data['selected_category'] ?? 'Hogar';
-                
-                // Check if it's a "No coverage" escalation
-                if ($conversation->bot_state === 'no_coverage_empresa') {
-                    $notifyData = [
-                        'phone' => $phone,
-                        'zip' => $data['zip_code'] ?? 'N/A',
-                        'category' => 'Empresa',
-                        'zones_available' => str_replace(["\n👉 ", "\n"], [' / ', ''], $data['coverage_zones'] ?? ''),
-                        'colonia_input' => $data['colonia_input'] ?? 'NO aparece en zonas cubiertas'
-                    ];
-                    TelegramService::notifyProspectNoCoverage($notifyData);
-                } else {
-                    $notifyData = [
-                        'phone' => $phone,
-                        'zip' => $data['zip_code'] ?? 'N/A',
-                        'colonia' => $data['neighborhood'] ?? 'Confirmada en zona de cobertura',
-                        'category' => $category,
-                        'plan' => $data['selected_plan'] ?? 'No especificado',
-                        'price' => $data['plan_price'] ?? '',
-                        'summary' => "— Verificó cobertura en CP " . ($data['zip_code'] ?? 'N/A') . " ✅\n— Interesado en planes " . strtolower($category) . "\n— Seleccionó el plan " . ($data['selected_plan'] ?? 'No especificado'),
-                        'name' => $data['customer_name'] ?? $conversation->contact->name ?? 'Prospecto'
-                    ];
-                    TelegramService::notifyNewProspect($notifyData);
-                }
+                $name = $data['customer_name'] ?? $conversation->contact->name ?? $phone;
+                TelegramService::notifyNewLead([
+                    'name' => $name,
+                    'phone' => $phone,
+                    'zip' => $zip,
+                    'interest' => $interest,
+                    'context' => $recentTxt
+                ]);
             }
 
             return $this->text("👨‍💻 He desactivado el bot para esta conversación.\nUn asesor te atenderá personalmente.\n\n" . $this->workHours());
@@ -369,13 +357,6 @@ class BotEngineService
                 $data['customer_address'] = $service->address ?? $service->customer->address ?? '';
                 $conversation->bot_state_data = $data;
                 $conversation->save();
-
-                // Mark contact as customer
-                if ($conversation->contact) {
-                    $conversation->contact->is_customer = true;
-                    $conversation->contact->save();
-                }
-
                 return []; // Proceed to next step
             }
             else {
@@ -408,7 +389,6 @@ class BotEngineService
                 $data['zip_code'] = $zip;
                 $conversation->bot_state_data = $data;
                 $conversation->save();
-
                 return ['_next_step' => 'no_coverage']; // Matches the 'no_coverage' step in DB
             }
         }
@@ -436,13 +416,23 @@ class BotEngineService
                         'status' => 'pending',
                     ]);
 
-                    TelegramService::sendMessage("📡 *Nuevo Lead BGITAL*\n\n📱 Tel: {$phone}\n📦 Plan: {$planName}\n📍 CP: {$zip}");
+                    TelegramService::notifyNewLead([
+                        'name' => $conversation->contact->name ?? $phone,
+                        'phone' => $phone,
+                        'zip' => $zip,
+                        'interest' => $planName,
+                        'context' => 'Solicitud de contratación directa.'
+                    ]);
                 }
             } catch (\Exception $e) {
                 Log::error("BotEngine: create_lead action failed: " . $e->getMessage());
             }
 
-            $this->resetState($conversation);
+            // ONLY reset state if it's the final action of a sequence where no next step is expected.
+            // When called from select_plan, we DO NOT reset because we want to reach "confirm_plan".
+            if (($config['reset'] ?? true)) {
+                $this->resetState($conversation);
+            }
             return [];
         }
 
@@ -522,7 +512,7 @@ class BotEngineService
 
             // Notify immediately to avoid loss if user doesn't follow through
             try {
-                $this->executeAction($conversation, 'create_lead', $data);
+                $this->executeAction($conversation, 'create_lead', $data, ['reset' => false]);
             } catch (\Exception $e) {
                 Log::error("BotEngine: select_plan lead auto-trigger failed: " . $e->getMessage());
             }

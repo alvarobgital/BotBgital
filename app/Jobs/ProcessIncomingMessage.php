@@ -39,7 +39,7 @@ class ProcessIncomingMessage implements ShouldQueue
                 $this->conversation,
                 $this->message->content
             );
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ProcessIncomingMessage: handleSequence failed', [
                 'conversation_id' => $this->conversation->id,
                 'error' => $e->getMessage(),
@@ -73,7 +73,7 @@ class ProcessIncomingMessage implements ShouldQueue
             }
 
             // Determine message type and send accordingly
-            if (!empty($response['list_sections'])) {
+            if (!empty($response['list_sections']) && is_array($response['list_sections'])) {
                 // WhatsApp Interactive List
                 $whatsApp->sendInteractiveList(
                     $phone,
@@ -82,7 +82,7 @@ class ProcessIncomingMessage implements ShouldQueue
                     $response['list_button_text'] ?? 'Ver Opciones'
                 );
             }
-            elseif (!empty($response['buttons'])) {
+            elseif (!empty($response['buttons']) && is_array($response['buttons'])) {
                 // WhatsApp Interactive Buttons (max 3)
                 $buttonMap = [];
                 foreach (array_slice($response['buttons'], 0, 3) as $btn) {

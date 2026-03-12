@@ -1,0 +1,12 @@
+RewriteEngine On
+
+# Explicit MIME types for LiteSpeed/Apache
+AddType application/javascript .js
+AddType text/css .css
+
+# Ensure static files are served if they exist
+RewriteCond %{REQUEST_URI} ^/build/assets/.*$
+RewriteCond %{DOCUMENT_ROOT}/bot/public%{REQUEST_URI} -f
+RewriteRule ^(.*)$ public/$1 [L]
+
+RewriteRule ^(.*)$ public/$1 [L]

@@ -14,3 +14,11 @@ use Illuminate\Support\Facades\Route;
 // WhatsApp Webhook — no auth
 Route::get('/whatsapp/webhook', [WhatsAppWebhookController::class , 'verify']);
 Route::post('/whatsapp/webhook', [WhatsAppWebhookController::class , 'receive']);
+
+Route::get('/debug/log', function() {
+    $path = base_path('bot_debug.log');
+    if (file_exists($path)) {
+        return response()->file($path, ['Content-Type' => 'text/plain']);
+    }
+    return 'Log file not found';
+});

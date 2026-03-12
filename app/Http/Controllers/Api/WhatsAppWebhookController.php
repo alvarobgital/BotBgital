@@ -24,9 +24,12 @@ class WhatsAppWebhookController extends Controller
         $challenge = $request->query('hub_challenge');
 
         if ($mode === 'subscribe' && $token === $verifyToken) {
+            file_put_contents(base_path('bot_debug.log'), date('[Y-m-d H:i:s]') . " Webhook: Verification SUCCESS\n", FILE_APPEND);
             Log::info('WhatsApp webhook verified');
             return response($challenge, 200)->header('Content-Type', 'text/plain');
         }
+
+        file_put_contents(base_path('bot_debug.log'), date('[Y-m-d H:i:s]') . " Webhook: Verification FAILED. Expected: {$verifyToken}, Got: {$token}\n", FILE_APPEND);
 
         return response('Forbidden', 403);
     }
@@ -37,6 +40,8 @@ class WhatsAppWebhookController extends Controller
     public function receive(Request $request)
     {
         $payload = $request->all();
+        $rawContent = $request->getContent();
+        file_put_contents(base_path('bot_debug.log'), date('[Y-m-d H:i:s]') . " Webhook: RAW=" . $rawContent . " | ALL=" . json_encode($payload) . "\n", FILE_APPEND);
 
         Log::info('WhatsApp webhook received', ['payload' => $payload]);
 
